@@ -35,7 +35,8 @@ def find_decls(text):
             break
         decl_start = m.start()
         decl_end = m.end()
-        decls.append(m.group(7))
+        if m.group(7) not in decls:
+            decls.append(m.group(7))
         tmp_text = tmp_text[decl_end:]
     return decls
 
@@ -49,7 +50,8 @@ def find_calls(text):
             break
         call_start = m.start()
         call_end = m.end()
-        calls.append(m.group(1))
+        if m.group(1) not in calls:
+            calls.append(m.group(1))
         tmp_text = tmp_text[call_end:]
     return calls
 
@@ -85,11 +87,14 @@ if __name__ == "__main__":
         with open(output_rule_file, "w", encoding="utf8") as f:
             fno = 0
             for file in file_entries:
+                sys.stdout.write("Start processing " + file + " ... ")
                 fno += 1
                 target_text = read_target_file(file)
+                sys.stdout.write("loaded ... ")
                 target_text = delete_comments(target_text)
                 decls = find_decls(target_text)
                 calls = find_calls(target_text)
+                sys.stdout.write("symbols extracted ... ")
                 decls.sort(key=len, reverse=True)
                 calls.sort(key=len, reverse=True)
                 mno = 0
@@ -99,4 +104,5 @@ if __name__ == "__main__":
                 for c in calls:
                     mno += 1
                     f.write("C\t{}\t{}\t{}\n".format(file, "_____F{}C{}_____".format(fno,mno),c))
+                sys.stdout.write("done.\n")
 
