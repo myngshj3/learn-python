@@ -10,7 +10,7 @@ unless (defined$java) {
 }
 
 # extract multibyte symbols
-my $status = system("perl extract_functions.pl $java > $java.replace-rule");
+my $status = system("perl extract_functions.pl $java | uniq > $java.replace-rule");
 unless ($status == 0) {
     print STDERR, "$java: AST generation failed. exit status: $status\n";
     exit $status;
