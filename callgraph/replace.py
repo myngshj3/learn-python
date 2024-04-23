@@ -37,11 +37,11 @@ if __name__ == "__main__":
         rule = read_rule(rule_file)
         target_text = read_target_file(target_file)
         if direction == "forward":
-            sindex = 3
-            tindex = 2
+            sindex = 0
+            tindex = 1
         else:
-            sindex = 2
-            tindex = 3
+            sindex = 1
+            tindex = 0
         for r in rule:
             print("replaing", r[sindex], "to", r[tindex])
             target_text = target_text.replace(r[sindex], r[tindex])
