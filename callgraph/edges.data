@@ -1,0 +1,4 @@
+ClassA::methodA	ClassB::methodB
+ClassB::methodB	ClassC::methodC
+ClassC::methodC	ClassD::methodD
+ClassB::methodB	ClassE::methodE
