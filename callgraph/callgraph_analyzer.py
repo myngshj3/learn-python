@@ -75,10 +75,16 @@ def do_add_edge(dg, args:dict):
 
 
 def do_callgraph(dg, args:dict):
+    s = None
+    t = None
     if "s" in args.keys():
         s = args["s"]
     if "t" in args.keys():
         t = args["t"]
+    if s is None:
+        sys.stderr.write("Error: source node not specified\n")
+    if t is None:
+        sys.stderr.write("Error: target node not specified\n")
     if s in dg.nodes and t in dg.nodes:
         if "f" in args.keys():
             with open(args["f"], "w", encoding="utf8") as f:
@@ -89,7 +95,6 @@ def do_callgraph(dg, args:dict):
                 sys.stdout.write("{}\n".format("\t".join(p)))
     else:
         sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
-                    
 
 
 def do_quit(dg, args:dict):
