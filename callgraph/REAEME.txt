@@ -1,0 +1,33 @@
+README.txt
+
+callgraph_analyzer.py
+対話形式の CallGraph 分析器
+Usage:
+  python callgraph_analyzer.py {edge-file}...
+  一つまたは複数のエッジファイルのリストからエッジデータを内部に取り込み、対話形式でハンドリングする。
+  エッジファイルを指定しない場合は、内部的には空のグラフを持つ。
+
+  起動後、プロンプト $> が表示され、コマンド待ち状態になる。
+  コマンド一覧
+  $> callgraph -s={from} -t={to} -sf={from-file} -tf={to-file} -f={output-file}
+     指定されたオプションにしたがい、パスを出力します。
+     -s={from} : ノード {from} を開始ノードとする。
+     -sf={from-file} : ノードファイル {from-file} に記載されているノードを開始ノードとする。
+     -t={to} : ノード {to} を終了ノードとする。
+     -tf={to-file} : ノードファイル {to-file} に記載されているノードを終了ノードとする。
+     -f={output-file} : ファイル{output-file} に出力する。-f オプションが指定されていない場合、標準出力に出力する。
+
+  $> dump -f={output-file}
+     指定されたオプションにしたがい、現在のグラフを出力する。
+     -f={output-file} : ファイル{output-file} に出力する。-f オプションが指定されていない場合、標準出力に出力する。
+
+  $> grep-node -n={node-pattern} -f={output-file}
+     指定されたオプションにしたがい、現在のグラフのノード出力する。
+     -n={node-pattern} : 文字列パターン{node-pattern}にマッチするノードを出力する。
+     -f={output-file} : ファイル{output-file}に出力する。このオプションが指定されていない場合、標準出力に出力する。
+
+  $> grep-edge -s={source-node-pattern} -t={targt-node-pattern} -f={output-file}
+     指定されたオプションにしたがい、現在のグラフのエッジを出力する。
+     -s={source-node-pattern} : 開始ノードが文字列パターン{source-node-pattern}にマッチするエッジをノードを出力候補とする。
+     -t={target-node-pattern} : 終了ノードが文字列パターン{target-node-pattern}にマッチするエッジをノードを出力候補とする。
+     -f={output-file} : ファイル{output-file}に出力する。このオプションが指定されていない場合、標準出力に出力する。
