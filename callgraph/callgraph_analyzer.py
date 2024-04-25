@@ -237,7 +237,7 @@ def get_cmd(args):
             return True, None, None # invalid command
         whole = m.group(0)
         cmd = m.group(1)
-        print("Command:{}:".format(cmd))
+        #print("Command:{}:".format(cmd))
         return False, cmd, args[len(whole):]
     except:
         return False, None , None # error
@@ -254,7 +254,7 @@ if __name__ == "__main__":
         if err:
             sys.stderr.write("Invalid command line:{}\n".format(user_input))
         else:
-            print("cmd/{}/".format(cmd))
+            #print("cmd/{}/".format(cmd))
             if cmd is None or len(cmd) == 0:
                 pass
             else:
