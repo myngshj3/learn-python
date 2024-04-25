@@ -16,7 +16,7 @@ def do_dump_to_file(dg, file):
                 sys.stderr.write("{}..".format(n))
         sys.stderr.write("{} edges dumped\n".format(n))
 
-                    
+
 def do_dump(dg, args:dict):
     if "f" in args.keys():
         file = args["f"]
@@ -116,10 +116,14 @@ commands = {
 
 
 def do_command(cmd:str, dg, args:dict):
-    if cmd in commands.keys():
-        commands[cmd](dg, args)
-    else:
-        sys.stderr.write("{}: command not found\n".format(cmd))
+    global commands
+    try:
+        if cmd in commands.keys():
+            commands[cmd](dg, args)
+        else:
+            sys.stderr.write("{}: command not found\n".format(cmd))
+    except:
+        sys.stderr.write(traceback.format_exc())
 
 
 def parse_args(args):
