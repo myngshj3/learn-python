@@ -255,13 +255,13 @@ if __name__ == "__main__":
             sys.stderr.write("Invalid command line:{}\n".format(user_input))
         else:
             #print("cmd/{}/".format(cmd))
-            if cmd is None or len(cmd) == 0:
-                pass
-            else:
+            if cmd in commands.keys():
                 arg_map = parse_args(args)
                 if arg_map is None:
                     sys.stderr.write("argument error:{}\n".format(args))
                 else:
                     if do_command(cmd, dg, arg_map):
                         break
+            else:
+                sys.stderr.write("Error: command not found:{}\n".format(cmd))
 
