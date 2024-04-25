@@ -5,23 +5,25 @@ import sys
 import traceback
 
 
-def do_dump_to_file(dg, file):
-    with open(file, "w", encoding="utf8") as f:
-        sys.stderr.write("dump to {}..".format(file))
-        n = 0
-        for e in dg.edges:
-            n += 1
-            f.write("{}\t{}\n".format(e[0], e[1]))
-            if n % 1000 == 0:
-                sys.stderr.write("{}..".format(n))
-        sys.stderr.write("{} edges dumped\n".format(n))
+def do_dump_to_file(dg, f):
+    #sys.stderr.write("dump to {}..".format(file))
+    n = 0
+    for e in dg.edges:
+        n += 1
+        f.write("{}\t{}\n".format(e[0], e[1]))
+        #if n % 1000 == 0:
+        #    sys.stderr.write("{}..".format(n))
+    #sys.stderr.write("{} edges dumped\n".format(n))
+    return False
 
 
 def do_dump(dg, args:dict):
     if "f" in args.keys():
-        file = args["f"]
-        do_dump_to_file(dg, file)
-    pass
+        with open(args["f"], "w", encoding="utf8") as f:
+            do_dump_to_file(dg, args["f"])
+    else:
+        do_dump_to_file(dg, sys.stdout)
+    return False
 
 
 def do_remove_edge_from_file(dg, file):
@@ -37,13 +39,17 @@ def do_remove_edge_from_file(dg, file):
             else:
                 if dg.has_edge(e[0], e[1]):
                     dg.remove_edge(e[0], e[1])
+    return False
 
 
 def do_remove_edge(dg, args:dict):
     if "f" in args.keys():
         file = args["f"]
         do_remove_edge_from_file(dg, file)
-    pass
+    if "s" in args.keys() and "t" in args.keys():
+        if dg.has_edge(args["s"], args["t"]):
+            dg.remove_edge(args["s"], args["t"])
+    return False
 
 
 def do_add_edge_from_file(dg, file):
@@ -65,43 +71,74 @@ def do_add_edge_from_file(dg, file):
                 if n % 1000 == 0:
                     sys.stderr.write("{}..".format(n))
         sys.stderr.write("{} edges added\n".format(n))
+    return False
                 
 
 def do_add_edge(dg, args:dict):
     if "f" in args.keys():
         file = args["f"]
         do_add_edge_from_file(dg, file)
-    pass
+    if "s" in args.keys() and "t" in args.keys():
+        if not dg.has_edge(args["s"], args["t"]):
+            dg.add_edge(args["s"], args["t"])
+    return False
 
 
 def do_callgraph(dg, args:dict):
-    s = None
-    t = None
+    sl = []
+    tl = []
     if "s" in args.keys():
-        s = args["s"]
+        sl.append(args["s"])
+    if "sf" in args.keys():
+        with open(args["sf"], "r", encoding="utf8") as f:
+            while True:
+                line = f.readline()
+                if line is not None and len(line) != 0:
+                    line = line.strip()
+                    sl.append(line)
+    if "tf" in args.keys():
+        with open(args["tf"], "r", encoding="utf8") as f:
+            while True:
+                line = f.readline()
+                if line is not None and len(line) != 0:
+                    line = line.strip()
+                    tl.append(line)
     if "t" in args.keys():
-        t = args["t"]
-    if s is None:
-        sys.stderr.write("Error: source node not specified\n")
-    if t is None:
-        sys.stderr.write("Error: target node not specified\n")
-    if s in dg.nodes and t in dg.nodes:
-        if "f" in args.keys():
-            with open(args["f"], "w", encoding="utf8") as f:
-                for p in nx.all_simple_paths(dg, s, t):
-                    f.write("{}\n".format("\t".join(p)))
-        else:
-            for p in nx.all_simple_paths(dg, s, t):
-                sys.stdout.write("{}\n".format("\t".join(p)))
-    else:
-        sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
+        tl.append(args["t"])
+    for s in sl:
+        for t in tl:
+            if s in dg.nodes and t in dg.nodes:
+                if "f" in args.keys():
+                    with open(args["f"], "w", encoding="utf8") as f:
+                        for p in nx.all_simple_paths(dg, s, t):
+                            f.write("{}\n".format("\t".join(p)))
+                else:
+                    for p in nx.all_simple_paths(dg, s, t):
+                        sys.stdout.write("{}\n".format("\t".join(p)))
+            else:
+                sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
+    return False
+
+
+def do_grep_node(dg, args:dict):
+    return False
+
+
+def do_grep_edge(dg, args:dict):
+    return False
 
 
 def do_quit(dg, args:dict):
-    exit(0)
+    return True
 
 
 commands = {
+    "grep-node": do_grep_node,
+    "grep_node": do_grep_node,
+    "grepnode": do_grep_node,
+    "grep-edge": do_grep_edge,
+    "grep_edge": do_grep_edge,
+    "grepedge": do_grep_edge,
     "dump": do_dump,
     "remove-edge": do_remove_edge,
     "remove_edge": do_remove_edge,
@@ -119,11 +156,13 @@ def do_command(cmd:str, dg, args:dict):
     global commands
     try:
         if cmd in commands.keys():
-            commands[cmd](dg, args)
+            return commands[cmd](dg, args)
         else:
             sys.stderr.write("{}: command not found\n".format(cmd))
+            return False
     except:
         sys.stderr.write(traceback.format_exc())
+        return False
 
 
 def parse_args(args):
@@ -193,5 +232,6 @@ if __name__ == "__main__":
                 if arg_map is None:
                     sys.stderr.write("argument error:{}\n".format(args))
                 else:
-                    do_command(cmd, dg, arg_map)
+                    if do_command(cmd, dg, arg_map):
+                        break
 
