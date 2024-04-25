@@ -121,10 +121,46 @@ def do_callgraph(dg, args:dict):
 
 
 def do_grep_node(dg, args:dict):
+    if "f" in args.keys():
+        with open(args["f"], "r", encoding="utf8") as f:
+            if "n" in args.keys():
+                p = re.compile(args["n"])
+                for n in dg.nodes:
+                    if p.search(n) is not None:
+                        f.write("{}\n".format(n))
+    else:
+        if "n" in args.keys():
+            p = re.compile(args["n"])
+            for n in dg.nodes:
+                if p.search(n) is not None:
+                    sys.stdout.write("{}\n".format(n))
     return False
 
 
 def do_grep_edge(dg, args:dict):
+    if "f" in args.keys():
+        with open(args["f"], "r", encoding="utf8") as f:
+            if "s" in args.keys():
+                p = re.compile(args["s"])
+                for e in dg.edges:
+                    if p.search(e[0]) is not None:
+                        f.write("{}\n".format(e[0]))
+            if "t" in args.keys():
+                p = re.compile(args["t"])
+                for e in dg.edges:
+                    if p.search(e[1]) is not None:
+                        f.write("{}\n".format(e[1]))
+    else:
+        if "s" in args.keys():
+            p = re.compile(args["s"])
+            for e in dg.edges:
+                if p.search(e[0]) is not None:
+                    sys.stderr.write("{}\n".format(e[0]))
+        if "t" in args.keys():
+            p = re.compile(args["t"])
+            for e in dg.edges:
+                if p.search(e[1]) is not None:
+                    sys.stderr.write("{}\n".format(e[1]))
     return False
 
 
