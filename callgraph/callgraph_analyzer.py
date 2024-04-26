@@ -127,26 +127,31 @@ def do_callgraph(dg, args:dict):
                 tl.append(line)
     if "t" in args.keys():
         tl.append(args["t"])
-    for s in sl:
-        for t in tl:
-            if s in dg.nodes and t in dg.nodes:
-                if "f" in args.keys():
-                    with open(args["f"], "w", encoding="utf8") as f:
+    if "f" in args.keys():
+        with open(args["f"], "w", encoding="utf8") as f:
+            for s in sl:
+                for t in tl:
+                    if s in dg.nodes and t in dg.nodes:
                         for p in nx.all_simple_paths(dg, source=s, target=t):
                             if len(p) < 2:
                                 continue
                             if rev:
                                 p = reversed(p)
                             f.write("{}\n".format(delim.join(p)))
-                else:
+                    else:
+                        sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
+    else:
+        for s in sl:
+            for t in tl:
+                if s in dg.nodes and t in dg.nodes:
                     for p in nx.all_simple_paths(dg, source=s, target=t):
                         if len(p) < 2:
                             continue
                         if rev:
                             p = reversed(p)
                         sys.stdout.write("{}\n".format(delim.join(p)))
-            else:
-                sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
+                else:
+                    sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
     return False
 
 
