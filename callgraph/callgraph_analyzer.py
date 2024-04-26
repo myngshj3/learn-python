@@ -5,12 +5,12 @@ import sys
 import traceback
 
 
-def do_dump_to_file(dg, f):
+def do_dump_to_file(dg, f, delim):
     #sys.stderr.write("dump to {}..".format(file))
     n = 0
     for e in dg.edges:
         n += 1
-        f.write("{}\t{}\n".format(e[0], e[1]))
+        f.write("{}{}{}\n".format(e[0], delim, e[1]))
         #if n % 1000 == 0:
         #    sys.stderr.write("{}..".format(n))
     #sys.stderr.write("{} edges dumped\n".format(n))
@@ -18,22 +18,26 @@ def do_dump_to_file(dg, f):
 
 
 def do_dump(dg, args:dict):
+    if "d" in args.keys():
+        delim = args["d"]
+    else:
+        delim = "\t"
     if "f" in args.keys():
         with open(args["f"], "w", encoding="utf8") as f:
-            do_dump_to_file(dg, args["f"])
+            do_dump_to_file(dg, args["f"], delim)
     else:
-        do_dump_to_file(dg, sys.stdout)
+        do_dump_to_file(dg, sys.stdout, delim)
     return False
 
 
-def do_remove_edge_from_file(dg, file):
+def do_remove_edge_from_file(dg, file, delim):
     with open(file, "r", encoding="utf8") as f:
         while True:
             line = f.readline()
             if line is None or len(line) == 0:
                 break
             line = line.strip()
-            e = line.split("\t")
+            e = line.split(delim)
             if e is None or type(e) is not list or len(e) != 2:
                 sys.stderr.write("Error: wrong edge data:{}\n", line)
             else:
@@ -43,16 +47,20 @@ def do_remove_edge_from_file(dg, file):
 
 
 def do_remove_edge(dg, args:dict):
+    if "d" in args.keys():
+        delim = args["d"]
+    else:
+        delim = "\t"
     if "f" in args.keys():
         file = args["f"]
-        do_remove_edge_from_file(dg, file)
+        do_remove_edge_from_file(dg, file, delim)
     if "s" in args.keys() and "t" in args.keys():
         if dg.has_edge(args["s"], args["t"]):
             dg.remove_edge(args["s"], args["t"])
     return False
 
 
-def do_add_edge_from_file(dg, file):
+def do_add_edge_from_file(dg, file, delim):
     with open(file, "r", encoding="utf8") as f:
         n = 0
         while True:
@@ -60,7 +68,7 @@ def do_add_edge_from_file(dg, file):
             if line is None or len(line) == 0:
                 break
             line = line.strip()
-            e = line.split("\t")
+            e = line.split(delim)
             if e is None or type(e) is not list or len(e) != 2:
                 sys.stderr.write("Error: wrong edge data:{}\n".format(line))
             else:
@@ -75,9 +83,13 @@ def do_add_edge_from_file(dg, file):
                 
 
 def do_add_edge(dg, args:dict):
+    if "d" in args.keys():
+        delim = args["d"]
+    else:
+        delim = "\t"
     if "f" in args.keys():
         file = args["f"]
-        do_add_edge_from_file(dg, file)
+        do_add_edge_from_file(dg, file, delim)
     if "s" in args.keys() and "t" in args.keys():
         if not dg.has_edge(args["s"], args["t"]):
             dg.add_edge(args["s"], args["t"])
@@ -87,22 +99,32 @@ def do_add_edge(dg, args:dict):
 def do_callgraph(dg, args:dict):
     sl = []
     tl = []
+    if "r" in args.keys():
+        rev = True
+    else:
+        rev = False
+    if "d" in args.keys():
+        delim = args["d"]
+    else:
+        delim = "\t"
     if "s" in args.keys():
         sl.append(args["s"])
     if "sf" in args.keys():
         with open(args["sf"], "r", encoding="utf8") as f:
             while True:
                 line = f.readline()
-                if line is not None and len(line) != 0:
-                    line = line.strip()
-                    sl.append(line)
+                if line is None or len(line) == 0:
+                    break
+                line = line.strip()
+                sl.append(line)
     if "tf" in args.keys():
         with open(args["tf"], "r", encoding="utf8") as f:
             while True:
                 line = f.readline()
-                if line is not None and len(line) != 0:
-                    line = line.strip()
-                    tl.append(line)
+                if line is None or len(line) == 0:
+                    break
+                line = line.strip()
+                tl.append(line)
     if "t" in args.keys():
         tl.append(args["t"])
     for s in sl:
@@ -110,11 +132,19 @@ def do_callgraph(dg, args:dict):
             if s in dg.nodes and t in dg.nodes:
                 if "f" in args.keys():
                     with open(args["f"], "w", encoding="utf8") as f:
-                        for p in nx.all_simple_paths(dg, s, t):
-                            f.write("{}\n".format("\t".join(p)))
+                        for p in nx.all_simple_paths(dg, source=s, target=t):
+                            if len(p) < 2:
+                                continue
+                            if rev:
+                                p = reversed(p)
+                            f.write("{}\n".format(delim.join(p)))
                 else:
-                    for p in nx.all_simple_paths(dg, s, t):
-                        sys.stdout.write("{}\n".format("\t".join(p)))
+                    for p in nx.all_simple_paths(dg, source=s, target=t):
+                        if len(p) < 2:
+                            continue
+                        if rev:
+                            p = reversed(p)
+                        sys.stdout.write("{}\n".format(delim.join(p)))
             else:
                 sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
     return False
@@ -146,15 +176,19 @@ def do_grep_edge(dg, args:dict):
         tp = re.compile(args["t"])
     else:
         tp = re.compile(r".")
+    if "d" in args.keys():
+        delim = args["d"]
+    else:
+        delim = "\t"
     if "f" in args.keys():
         with open(args["f"], "w", encoding="utf8") as f:
             for e in dg.edges:
                 if sp.search(e[0]) is not None and tp.search(e[1]) is not None:
-                    f.write("{}\t{}\n".format(e[0], e[1]))
+                    f.write("{}{}{}\n".format(e[0], delim, e[1]))
     else:
         for e in dg.edges:
             if sp.search(e[0]) is not None and tp.search(e[1]) is not None:
-                sys.stdout.write("{}\t{}\n".format(e[0], e[1]))
+                sys.stdout.write("{}{}{}\n".format(e[0], delim, e[1]))
     return False
 
 
@@ -199,7 +233,7 @@ def parse_args(args):
     try:
         fin_pattern = re.compile(r"^\s*$")
         option_without_param = re.compile(r"^\-{1,2}([\w\d][\w\d\-]*)(\s+|$)")
-        option_with_param    = re.compile(r"^\-{1,2}([\w\d][\w\d\-]*)=([\w\d\-\.:]*)(\s+|$)")
+        option_with_param    = re.compile(r"^\-{1,2}([\w\d][\w\d\-]*)=(([\w\d\-\.:]*)|(\"[^\"]*\"))(\s+|$)")
         arg_map = {}
         pos = 0
         while True:
@@ -218,7 +252,10 @@ def parse_args(args):
             if m is not None:
                 whole = m.group(0)
                 arg = m.group(1)
-                value = m.group(2)
+                if m.group(3) is not None and len(m.group(3)) != 0:
+                    value = m.group(3)
+                else:
+                    value = m.group(4)[1:len(m.group(4))-1]
                 arg_map[arg] = value
                 pos += len(whole)
                 continue
@@ -231,7 +268,11 @@ def parse_args(args):
 
 def get_cmd(args):
     cmd_pattern = re.compile(r"^\s*(\w[\w\d\-]*)(\s+|$)")
+    fin_pattern = re.compile(r"^\s*$")
     try:
+        m = fin_pattern.search(args)
+        if m is not None:
+            return False, None, None
         m = cmd_pattern.search(args)
         if m is None:
             return True, None, None # invalid command
@@ -248,14 +289,15 @@ if __name__ == "__main__":
     for file in sys.argv[1:]:
         do_command("add-edge", dg, {"f":file, "ow":True})
     while True:
-        user_input = input("$>")
+        user_input = input("$> ")
         user_input = user_input.strip()
         err, cmd, args = get_cmd(user_input)
         if err:
             sys.stderr.write("Invalid command line:{}\n".format(user_input))
         else:
-            #print("cmd/{}/".format(cmd))
-            if cmd in commands.keys():
+            if cmd is None:
+                continue
+            elif cmd in commands.keys():
                 arg_map = parse_args(args)
                 if arg_map is None:
                     sys.stderr.write("argument error:{}\n".format(args))

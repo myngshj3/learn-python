@@ -15,11 +15,14 @@ Usage:
      -sf={from-file} : ノードファイル {from-file} に記載されているノードを開始ノードとする。
      -t={to} : ノード {to} を終了ノードとする。
      -tf={to-file} : ノードファイル {to-file} に記載されているノードを終了ノードとする。
+     -r : パスを逆向きに表示する
+     -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
      -f={output-file} : ファイル{output-file} に出力する。-f オプションが指定されていない場合、標準出力に出力する。
 
   $> dump -f={output-file}
      指定されたオプションにしたがい、現在のグラフを出力する。
      -f={output-file} : ファイル{output-file} に出力する。-f オプションが指定されていない場合、標準出力に出力する。
+     -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
 
   $> grep-node -n={node-pattern} -f={output-file}
      指定されたオプションにしたがい、現在のグラフのノード出力する。
@@ -30,6 +33,7 @@ Usage:
      指定されたオプションにしたがい、現在のグラフのエッジを出力する。
      -s={source-node-pattern} : 開始ノードが文字列パターン{source-node-pattern}にマッチするエッジをノードを出力候補とする。
      -t={target-node-pattern} : 終了ノードが文字列パターン{target-node-pattern}にマッチするエッジをノードを出力候補とする。
+     -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
      -f={output-file} : ファイル{output-file}に出力する。このオプションが指定されていない場合、標準出力に出力する。
 
   $> add-edge -s={source-node} -sf={source-node-file} -t={targt-node} -tf={target-node-file} -f={output-file}
@@ -38,6 +42,7 @@ Usage:
      -sf={source-node-file} : ファイル{source-node-file}に記載されているノードを開始ノードとするエッジを出力候補とする。
      -t={target-node} : 終了ノードが文字列パターン{target-node-pattern}にマッチするエッジをノードを出力候補とする。
      -tf={target-node-file} : ファイル{target-node-file}に記載されているノードを終了ノードとするエッジを出力候補とする。
+     -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
      -f={edge-file} : ファイル{edge-file}に記載されているエッジを追加する。
 
   $> remove-edge -s={source-node} -sf={source-node-file} -t={targt-node} -tf={target-node-file} -f={output-file}
@@ -46,8 +51,8 @@ Usage:
      -sf={source-node-file} : ファイル{source-node-file}に記載されているノードを開始ノードとするエッジを削除候補とする。
      -t={target-node} : 終了ノードが文字列パターン{target-node-pattern}にマッチするエッジをノードを削除候補とする。
      -tf={target-node-file} : ファイル{target-node-file}に記載されているノードを終了ノードとするエッジを削除候補とする。
+     -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
 
   $> quit
   $> exit
      プログラムを終了する。
- 
