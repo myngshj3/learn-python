@@ -1,16 +1,29 @@
 
+import json
 import networkx as nx
 import re
 import sys
 import traceback
 
 
-def do_dump_to_file(dg, f, delim):
+node_pattern = re.compile(r"^([^\{\}]+)({.*\})$")
+def split_node(edge):
+    m = node_pattern.search(edge)
+    if m is None:
+        return edge, {}
+    else:
+        return m.group(1), json.loads(m.group(2))
+
+
+def do_dump_to_file(dg, f, delim, attr_needed):
     #sys.stderr.write("dump to {}..".format(file))
     n = 0
     for e in dg.edges:
         n += 1
-        f.write("{}{}{}\n".format(e[0], delim, e[1]))
+        if attr_needed:
+            f.write("{}{}{}{}{}\n".format(e[0], json.dumps(dg.nodes[e[0]]), delim, e[1], json.dumps(dg.nodes[e[1]])))
+        else:
+            f.write("{}{}{}\n".format(e[0], delim, e[1]))
         #if n % 1000 == 0:
         #    sys.stderr.write("{}..".format(n))
     #sys.stderr.write("{} edges dumped\n".format(n))
@@ -22,11 +35,15 @@ def do_dump(dg, args:dict):
         delim = args["d"]
     else:
         delim = "\t"
+    if "a" in args.keys():
+        attr_needed = True
+    else:
+        attr_needed = False
     if "f" in args.keys():
         with open(args["f"], "w", encoding="utf8") as f:
-            do_dump_to_file(dg, args["f"], delim)
+            do_dump_to_file(dg, f, delim, attr_needed)
     else:
-        do_dump_to_file(dg, sys.stdout, delim)
+        do_dump_to_file(dg, sys.stdout, delim, attr_needed)
     return False
 
 
@@ -41,8 +58,10 @@ def do_remove_edge_from_file(dg, file, delim):
             if e is None or type(e) is not list or len(e) != 2:
                 sys.stderr.write("Error: wrong edge data:{}\n", line)
             else:
-                if dg.has_edge(e[0], e[1]):
-                    dg.remove_edge(e[0], e[1])
+                s, sa = split_node(e[0])
+                t, ta = split_node(e[1])
+                if dg.has_edge(s, t):
+                    dg.remove_edge(s, t)
     return False
 
 
@@ -54,10 +73,51 @@ def do_remove_edge(dg, args:dict):
     if "f" in args.keys():
         file = args["f"]
         do_remove_edge_from_file(dg, file, delim)
-    if "s" in args.keys() and "t" in args.keys():
-        if dg.has_edge(args["s"], args["t"]):
-            dg.remove_edge(args["s"], args["t"])
+    sl = []
+    tl = []
+    if "s" in args.keys():
+        sl.append(args["s"])
+    if "t" in args.keys():
+        tl.append(args["t"])
+    if "sf" in args.keys():
+        with open(args["sf"], "r", encoding="utf8") as f:
+            while True:
+                line = f.readline()
+                if line is None or len(line) == 0:
+                    break
+                line = line.strip()
+                sl.append(line)
+    if "tf" in args.keys():
+        with open(args["tf"], "r", encoding="utf8") as f:
+            while True:
+                line = f.readline()
+                if line is None or len(line) == 0:
+                    break
+                line = line.strip()
+                tl.append(line)
+    for s in sl:
+        s, sa = split_node(s)
+        for t in tl:
+            t, ta = split_node(t)
+            if dg.has_edge(s, t):
+                dg.remove_edge(s, t)
     return False
+
+
+def add_edge(dg, edge):
+    n = []
+    a = []
+    for _n in edge:
+        _n, _na = split_node(_n)
+        n.append(_n)
+        a.append(_na)
+    if dg.has_edge(n[0], n[1]):
+        dg.remove_edge(n[0], n[1])
+    dg.add_edge(n[0], n[1])
+    for _n, _a in zip(n, a):
+        dg.nodes[_n].clear()
+        for k in _a.keys():
+            dg.nodes[_n][k] = _a[k]
 
 
 def do_add_edge_from_file(dg, file, delim):
@@ -71,16 +131,17 @@ def do_add_edge_from_file(dg, file, delim):
             e = line.split(delim)
             if e is None or type(e) is not list or len(e) != 2:
                 sys.stderr.write("Error: wrong edge data:{}\n".format(line))
+                sys.stderr.flush()
             else:
-                if dg.has_edge(e[0], e[1]):
-                    dg.remove_edge(e[0], e[1])
                 n += 1
-                dg.add_edge(e[0], e[1])
+                add_edge(dg, e)
                 if n % 1000 == 0:
                     sys.stderr.write("{}..".format(n))
+                    sys.stderr.flush()
         sys.stderr.write("{} edges added\n".format(n))
+        sys.stderr.flush()
     return False
-                
+
 
 def do_add_edge(dg, args:dict):
     if "d" in args.keys():
@@ -90,15 +151,43 @@ def do_add_edge(dg, args:dict):
     if "f" in args.keys():
         file = args["f"]
         do_add_edge_from_file(dg, file, delim)
-    if "s" in args.keys() and "t" in args.keys():
-        if not dg.has_edge(args["s"], args["t"]):
-            dg.add_edge(args["s"], args["t"])
+    sl = []
+    if "s" in args.keys():
+        s, sa = split_node(args["s"])
+        sl.append([s, sa])
+    if "sf" in args.keys():
+        with open(args["sf"], "r", encoding="utf8") as f:
+            while True:
+                line = f.readline()
+                if line is None or len(line) == 0:
+                    break
+                line = line.strip()
+                sl.append(line)
+    tl = []
+    if "t" in args.keys():
+        t, ta = split_node(args["t"])
+        tl.append([t, ta])
+    if "tf" in args.keys():
+        with open(args["tf"], "r", encoding="utf8") as f:
+            while True:
+                line = f.readline()
+                if line is None or len(line) == 0:
+                    break
+                line = line.strip()
+                tl.append(line)
+    for s in sl:
+        for t in tl:
+            add_edge(dg, [s, t])
     return False
 
 
 def do_callgraph(dg, args:dict):
     sl = []
     tl = []
+    if "a" in args.keys():
+        attr_needed = True
+    else:
+        attr_needed = False
     if "r" in args.keys():
         rev = True
     else:
@@ -137,6 +226,8 @@ def do_callgraph(dg, args:dict):
                                 continue
                             if rev:
                                 p = reversed(p)
+                            if attr_needed:
+                                p = [_ + json.dumps(dg.nodes[_]) for _ in p]
                             f.write("{}\n".format(delim.join(p)))
                     else:
                         sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
@@ -149,6 +240,8 @@ def do_callgraph(dg, args:dict):
                             continue
                         if rev:
                             p = reversed(p)
+                        if attr_needed:
+                            p = [_ + json.dumps(dg.nodes[_]) for _ in p]
                         sys.stdout.write("{}\n".format(delim.join(p)))
                 else:
                     sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))

@@ -18,11 +18,13 @@ Usage:
      -r : パスを逆向きに表示する
      -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
      -f={output-file} : ファイル{output-file} に出力する。-f オプションが指定されていない場合、標準出力に出力する。
+     -a : ノードの属性も出力する。
 
   $> dump -f={output-file}
      指定されたオプションにしたがい、現在のグラフを出力する。
      -f={output-file} : ファイル{output-file} に出力する。-f オプションが指定されていない場合、標準出力に出力する。
      -d={delimiter} : パス内のメソッドの区切り文字を {delimiter} にする。デフォルトはタブ(\t)。
+     -a : ノードの属性も出力する。
 
   $> grep-node -n={node-pattern} -f={output-file}
      指定されたオプションにしたがい、現在のグラフのノード出力する。
