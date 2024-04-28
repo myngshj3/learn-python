@@ -278,7 +278,7 @@ def do_callgraph(dg, args:dict):
     return False
 
 
-def walker_action(args):
+def walker_action(G, args):
     if "fp" in args.keys():
         fp = args["fp"]
         if "bp" in args.keys():
@@ -287,6 +287,8 @@ def walker_action(args):
                 d = args["d"]
             else:
                 d = "\t"
+            if "a" in args.keys():
+                bp = [_ + json.dumps(G.nodes[_]) for _ in bp]
             fp.write(d.join(bp) + "\n")
             fp.flush()
             return True
@@ -302,12 +304,12 @@ def walk_naive(G, bpl, action, action_args):
         tl = [_ for _ in G[bp[len(bp)-1]].keys()]
         if len(tl) == 0:
             action_args["bp"] = bp
-            action(action_args)
+            action(G, action_args)
         else:
             for t in tl:
                 if t in bp:
                     action_args["bp"] = bp
-                    action(action_args)
+                    action(G, action_args)
                 else:
                     p = [_ for _ in bp]
                     p.append(t)
@@ -323,6 +325,8 @@ def do_walk_naive(dg, args:dict):
         walker_args["d"] = args["d"]
     else:
         walker_args["d"] = "\t"
+    if "a" in args.keys():
+        walker_args["a"] = args["a"]
     if "r" in args.keys():
         dg = dg.reverse(copy=True)
     if "sf" in args.keys():
