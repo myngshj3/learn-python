@@ -1,0 +1,2 @@
+com.sun.jdi.connect.AttachingConnector
+com.sun.jdi.connect.AttachingConnector:attach

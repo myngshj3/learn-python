@@ -1,0 +1,88 @@
+com.sun.tools.jconsole.JConsoleContext$ConnectionState	com.sun.tools.jconsole.JConsoleContext	java.lang.Object
+com.sun.tools.jconsole.JConsoleContext$ConnectionState	java.lang.Enum
+com.sun.tools.jconsole.JConsoleContext	java.lang.Object
+com.sun.tools.jconsole.JConsoleContext	com.sun.tools.jconsole.JConsoleContext$ConnectionState	java.lang.Enum
+com.sun.tools.jconsole.JConsolePlugin	java.lang.Object
+com.sun.tools.jconsole.JConsolePlugin	com.sun.tools.jconsole.JConsoleContext	java.lang.Object
+com.sun.tools.jconsole.JConsolePlugin	com.sun.tools.jconsole.JConsoleContext	com.sun.tools.jconsole.JConsoleContext$ConnectionState	java.lang.Enum
+com.sun.tools.jconsole.JConsolePlugin	java.beans.PropertyChangeListener
+com.sun.tools.jconsole.JConsolePlugin	java.lang.NullPointerException
+com.sun.tools.jconsole.JConsolePlugin	java.util.ArrayList
+com.sun.tools.jconsole.JConsolePlugin	java.util.Iterator
+com.sun.tools.jconsole.JConsolePlugin	java.lang.Throwable
+com.sun.tools.jconsole.JConsolePlugin	java.util.List
+com.sun.tools.jconsole.package-info	java.lang.Object
+com.sun.tools.attach.VirtualMachineDescriptor	java.lang.Object
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.Object
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.Class
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.String
+com.sun.tools.attach.VirtualMachineDescriptor	java.lang.String
+com.sun.tools.attach.VirtualMachineDescriptor	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachNotSupportedException	java.lang.Exception
+com.sun.tools.attach.VirtualMachineDescriptor	java.lang.NullPointerException
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.ArrayList
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.Iterator
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.Throwable
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.List
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.System
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.io.IOException
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.io.PrintStream
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.IllegalArgumentException
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.Collections
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.ServiceLoader
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.SecurityManager
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.security.BasicPermission
+com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.ThreadDeath
+com.sun.tools.attach.AttachNotSupportedException	java.lang.Exception
+com.sun.tools.attach.VirtualMachine	java.lang.Object
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.lang.Object
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.Object
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.Object
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.Object
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.lang.Class
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.Class
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.String
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.String
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.String
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.String
+com.sun.tools.attach.VirtualMachine	java.lang.String
+com.sun.tools.attach.VirtualMachine	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.StringBuilder
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachNotSupportedException	java.lang.Exception
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.AttachNotSupportedException	java.lang.Exception
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.AgentLoadException	java.lang.Exception
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.AgentInitializationException	java.lang.Exception
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachNotSupportedException	java.lang.Exception
+com.sun.tools.attach.VirtualMachine	java.lang.NullPointerException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.NullPointerException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	java.lang.NullPointerException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.util.ArrayList
+com.sun.tools.attach.VirtualMachine	java.util.ArrayList
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.ArrayList
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.util.Iterator
+com.sun.tools.attach.VirtualMachine	java.util.Iterator
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.Iterator
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.lang.Throwable
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.Throwable
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.util.List
+com.sun.tools.attach.VirtualMachine	java.util.List
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.List
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.lang.System
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.System
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.io.IOException
+com.sun.tools.attach.VirtualMachine	java.io.IOException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.io.IOException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.io.PrintStream
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.io.PrintStream
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.IllegalArgumentException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	com.sun.tools.attach.AttachPermission	java.lang.IllegalArgumentException
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.util.Collections
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.Collections
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.util.ServiceLoader
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.util.ServiceLoader
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.spi.AttachProvider	java.lang.SecurityManager
+com.sun.tools.attach.VirtualMachine	com.sun.tools.attach.VirtualMachineDescriptor	com.sun.tools.attach.spi.AttachProvider	java.lang.SecurityManager

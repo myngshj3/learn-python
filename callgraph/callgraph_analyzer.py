@@ -113,11 +113,14 @@ def add_edge(dg, edge):
         a.append(_na)
     if dg.has_edge(n[0], n[1]):
         dg.remove_edge(n[0], n[1])
+    if n[0] == n[1]:
+        return False
     dg.add_edge(n[0], n[1])
     for _n, _a in zip(n, a):
         dg.nodes[_n].clear()
         for k in _a.keys():
             dg.nodes[_n][k] = _a[k]
+    return True
 
 
 def do_add_edge_from_file(dg, file, delim):
@@ -133,11 +136,13 @@ def do_add_edge_from_file(dg, file, delim):
                 sys.stderr.write("Error: wrong edge data:{}\n".format(line))
                 sys.stderr.flush()
             else:
-                n += 1
-                add_edge(dg, e)
-                if n % 1000 == 0:
-                    sys.stderr.write("{}..".format(n))
-                    sys.stderr.flush()
+                if add_edge(dg, e):
+                    n += 1
+                    if n % 1000 == 0:
+                        sys.stderr.write("{}..".format(n))
+                        sys.stderr.flush()
+                else:
+                    pass
         sys.stderr.write("{} edges added\n".format(n))
         sys.stderr.flush()
     return False
@@ -196,8 +201,6 @@ def do_callgraph(dg, args:dict):
         delim = args["d"]
     else:
         delim = "\t"
-    if "s" in args.keys():
-        sl.append(args["s"])
     if "sf" in args.keys():
         with open(args["sf"], "r", encoding="utf8") as f:
             while True:
@@ -205,7 +208,11 @@ def do_callgraph(dg, args:dict):
                 if line is None or len(line) == 0:
                     break
                 line = line.strip()
-                sl.append(line)
+                if line in dg.nodes:
+                    sl.append(line)
+    if "s" in args.keys():
+        if args["s"] in dg.nodes and args["s"] not in sl:
+            sl.append(args["s"])
     if "tf" in args.keys():
         with open(args["tf"], "r", encoding="utf8") as f:
             while True:
@@ -213,28 +220,23 @@ def do_callgraph(dg, args:dict):
                 if line is None or len(line) == 0:
                     break
                 line = line.strip()
-                tl.append(line)
+                if line in dg.nodes:
+                    tl.append(line)
     if "t" in args.keys():
-        tl.append(args["t"])
+        if args["t"] in dg.nodes and args["t"] not in tl:
+            tl.append(args["t"])
     if "f" in args.keys():
         with open(args["f"], "w", encoding="utf8") as f:
+            i = 0
             for s in sl:
                 for t in tl:
-                    if s in dg.nodes and t in dg.nodes:
-                        for p in nx.all_simple_paths(dg, source=s, target=t):
-                            if len(p) < 2:
-                                continue
-                            if rev:
-                                p = reversed(p)
-                            if attr_needed:
-                                p = [_ + json.dumps(dg.nodes[_]) for _ in p]
-                            f.write("{}\n".format(delim.join(p)))
-                    else:
-                        sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
-    else:
-        for s in sl:
-            for t in tl:
-                if s in dg.nodes and t in dg.nodes:
+                    i += 1
+                    if i % 1000 == 0:
+                        sys.stderr.write("{}..".format(i))
+                        sys.stderr.write("{}:{}->{}..".format(i, s, t))
+                        sys.stderr.flush()
+                    sys.stderr.write("{}->{}...".format(s, t))
+                    sys.stderr.flush()
                     for p in nx.all_simple_paths(dg, source=s, target=t):
                         if len(p) < 2:
                             continue
@@ -242,10 +244,112 @@ def do_callgraph(dg, args:dict):
                             p = reversed(p)
                         if attr_needed:
                             p = [_ + json.dumps(dg.nodes[_]) for _ in p]
-                        sys.stdout.write("{}\n".format(delim.join(p)))
-                else:
-                    sys.stderr.write("Error: node doesn't exist: {} or {}\n".format(s,t))
+                        f.write("{}\n".format(delim.join(p)))
+                        f.flush()
+                        sys.stderr.write("{}\n".format(delim.join(p)))
+                        sys.stderr.flush()
+                    sys.stderr.write("done\n".format(s, t))
+                    sys.stderr.flush()
+            sys.stderr.write("{} source-target path pattern done\n".format(i))
+            sys.stderr.flush()
+    else:
+        i = 0
+        for s in sl:
+            for t in tl:
+                i += 1
+                if i % 1000 == 0:
+                    sys.stderr.write("{}..".format(i))
+                    sys.stderr.flush()
+                sys.stderr.write("{}->{}...".format(s, t))
+                sys.stderr.flush()
+                for p in nx.all_simple_paths(dg, source=s, target=t):
+                    if len(p) < 2:
+                        continue
+                    if rev:
+                        p = reversed(p)
+                    if attr_needed:
+                        p = [_ + json.dumps(dg.nodes[_]) for _ in p]
+                    sys.stdout.write("{}\n".format(delim.join(p)))
+                    sys.stdout.flush()
+                sys.stderr.write("done\n".format(s, t))
+                sys.stderr.flush()
+        sys.stderr.write("{} source-target path pattern done\n".format(i))
+        sys.stderr.flush()
     return False
+
+
+def walker_action(args):
+    if "fp" in args.keys():
+        fp = args["fp"]
+        if "bp" in args.keys():
+            bp = args["bp"]
+            if "d" in args.keys():
+                d = args["d"]
+            else:
+                d = "\t"
+            fp.write(d.join(bp) + "\n")
+            fp.flush()
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def walk_naive(G, bpl, action, action_args):
+    w = []
+    for bp in bpl:
+        tl = [_ for _ in G[bp[len(bp)-1]].keys()]
+        if len(tl) == 0:
+            action_args["bp"] = bp
+            action(action_args)
+        else:
+            for t in tl:
+                if t in bp:
+                    action_args["bp"] = bp
+                    action(action_args)
+                else:
+                    p = [_ for _ in bp]
+                    p.append(t)
+                    w.append(p)
+                    w = walk_naive(G, w, action, action_args)
+    return w
+
+
+def do_walk_naive(dg, args:dict):
+    sl = []
+    walker_args = {}
+    if "d" in args.keys():
+        walker_args["d"] = args["d"]
+    else:
+        walker_args["d"] = "\t"
+    if "r" in args.keys():
+        dg = dg.reverse(copy=True)
+    if "sf" in args.keys():
+        with open(args["sf"], "r", encoding="utf8") as f:
+            while True:
+                n = f.readline()
+                if n is None or len(n) == 0:
+                    break
+                n = n.strip()
+                if n not in sl and n in dg.nodes:
+                    sl.append(n)
+    if "s" in args.keys():
+        s = args["s"]
+        if s not in sl and s in dg.nodes:
+            sl.append(s)
+    bpl = []
+    for s in sl:
+        bpl.append([s])
+    if "f" in args.keys():
+        with open(args["f"], "w", encoding="utf8") as fp:
+            walker_args["fp"] = fp
+            walk_naive(dg, bpl, walker_action, walker_args)
+            return False
+    else:
+        walker_args["fp"] = sys.stdout
+        walk_naive(dg, bpl, walker_action, walker_args)
+        return False
 
 
 def do_grep_node(dg, args:dict):
@@ -295,6 +399,8 @@ def do_quit(dg, args:dict):
 
 
 commands = {
+    "walk": do_walk_naive,
+    "walks": do_walk_naive,
     "grep-node": do_grep_node,
     "grep_node": do_grep_node,
     "grepnode": do_grep_node,
@@ -400,7 +506,8 @@ if __name__ == "__main__":
                 if arg_map is None:
                     sys.stderr.write("argument error:{}\n".format(args))
                 else:
-                    if do_command(cmd, dg, arg_map):
+                    q = do_command(cmd, dg, arg_map)
+                    if q:
                         break
             else:
                 sys.stderr.write("Error: command not found:{}\n".format(cmd))
