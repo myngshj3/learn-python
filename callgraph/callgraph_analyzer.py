@@ -189,14 +189,18 @@ def do_add_edge(dg, args:dict):
 def do_callgraph(dg, args:dict):
     sl = []
     tl = []
+    if "r" in args.keys():
+        dg = dg.reverse(copy=True)
     if "a" in args.keys():
         attr_needed = True
     else:
         attr_needed = False
     if "r" in args.keys():
-        rev = True
+        dg = dg.reverse(copy=True)
+    if "rp" in args.keys():
+        rp = True
     else:
-        rev = False
+        rp = False
     if "d" in args.keys():
         delim = args["d"]
     else:
@@ -240,7 +244,7 @@ def do_callgraph(dg, args:dict):
                     for p in nx.all_simple_paths(dg, source=s, target=t):
                         if len(p) < 2:
                             continue
-                        if rev:
+                        if rp:
                             p = reversed(p)
                         if attr_needed:
                             p = [_ + json.dumps(dg.nodes[_]) for _ in p]
@@ -265,7 +269,7 @@ def do_callgraph(dg, args:dict):
                 for p in nx.all_simple_paths(dg, source=s, target=t):
                     if len(p) < 2:
                         continue
-                    if rev:
+                    if rp:
                         p = reversed(p)
                     if attr_needed:
                         p = [_ + json.dumps(dg.nodes[_]) for _ in p]
@@ -282,15 +286,28 @@ def walker_action(G, args):
     if "fp" in args.keys():
         fp = args["fp"]
         if "bp" in args.keys():
+            if "rtl" in args.keys():
+                rtl = args["rtl"]
+            else:
+                rtl = None
             bp = args["bp"]
             if "d" in args.keys():
                 d = args["d"]
             else:
                 d = "\t"
-            if "a" in args.keys():
-                bp = [_ + json.dumps(G.nodes[_]) for _ in bp]
-            fp.write(d.join(bp) + "\n")
-            fp.flush()
+            dump_needed = False
+            if rtl is None:
+                dump_needed = True
+            else:
+                for n in bp:
+                    if n in rtl:
+                        dump_needed = True
+                        break
+            if dump_needed:
+                if "a" in args.keys():
+                    bp = [_ + json.dumps(G.nodes[_]) for _ in bp]
+                fp.write(d.join(bp) + "\n")
+                fp.flush()
             return True
         else:
             return False
@@ -299,34 +316,62 @@ def walker_action(G, args):
 
 
 def walk_naive(G, bpl, action, action_args):
+    if "ld" in action_args.keys():
+        ld = action_args["ld"]
+    else:
+        ld = 2
+    if "hd" in action_args.keys():
+        hd = action_args["hd"]
+    else:
+        hd = None
+    if "rp" in action_args.keys():
+        rp = True
+    else:
+        rp = False
     w = []
     for bp in bpl:
         tl = [_ for _ in G[bp[len(bp)-1]].keys()]
         if len(tl) == 0:
-            action_args["bp"] = bp
-            action(G, action_args)
+            if ld <= len(bp) and (hd is None or len(bp) <= hd):
+                if rp:
+                    action_args["bp"] = reversed(bp)
+                else:
+                    action_args["bp"] = bp
+                action(G, action_args)
         else:
             for t in tl:
                 if t in bp:
-                    action_args["bp"] = bp
-                    action(G, action_args)
+                    if ld <= len(bp) and (hd is None or len(bp) <= hd):
+                        action_args["bp"] = bp
+                        action(G, action_args)
                 else:
-                    p = [_ for _ in bp]
-                    p.append(t)
-                    w.append(p)
-                    w = walk_naive(G, w, action, action_args)
+                    if hd is None or len(bp) < hd:
+                        p = [_ for _ in bp]
+                        p.append(t)
+                        w.append(p)
+                        w = walk_naive(G, w, action, action_args)
     return w
 
 
 def do_walk_naive(dg, args:dict):
     sl = []
     walker_args = {}
+    if "ld" in args.keys():
+        walker_args["ld"] = int(args["ld"])
+    else:
+        walker_args["ld"] = 2
+    if "hd" in args.keys():
+        walker_args["hd"] = int(args["hd"])
+    else:
+        walker_args["hd"] = None
     if "d" in args.keys():
         walker_args["d"] = args["d"]
     else:
         walker_args["d"] = "\t"
     if "a" in args.keys():
         walker_args["a"] = args["a"]
+    if "rp" in args.keys():
+        walker_args["rp"] = args["rp"]
     if "r" in args.keys():
         dg = dg.reverse(copy=True)
     if "sf" in args.keys():
@@ -342,6 +387,23 @@ def do_walk_naive(dg, args:dict):
         s = args["s"]
         if s not in sl and s in dg.nodes:
             sl.append(s)
+    rtl = None
+    if "rtf" in args.keys():
+        rtl = []
+        with open(args["rtf"], "r", encoding="utf8") as f:
+            while True:
+                n = f.readline()
+                if n is None or len(n) == 0:
+                    break
+                n = n.strip()
+                if n not in rtl and n in dg.nodes:
+                    rtl.append(n)
+    if "rt" in args.keys():
+        if rtl is None:
+            rtl = []
+        if args["rt"] not in rtl and args["rt"] in dg.nodes:
+            rtl.append(args["rt"])
+    walker_args["rtl"] = rtl
     bpl = []
     for s in sl:
         bpl.append([s])
