@@ -1,5 +1,0 @@
-ClassA::methodA{"cost":0.5,"consumption_time":3}	ClassB::methodB{"cost":0.2,"consumption_time":4}	{"cost": 0.5,"consumption_time":7}
-ClassB::methodB{"cost":0.1,"consumption_time":5}	ClassC::methodC{"cost":0.3,"consumption_time":7}	{"cost": 0.3,"consumption_time":7}
-ClassB::methodB{"cost":0.4,"consumption_time":7}	ClassE::methodE{"cost":0.6,"consumption_time":7}	{"cost": 0.3,"consumption_time":7}
-ClassC::methodC{"cost":0.1,"consumption_time":7}	ClassD::methodD{"cost":0.7,"consumption_time":7}	{"cost": 0.1,"consumption_time":7}
-ClassD::methodD{"cost":0.2,"consumption_time":7}	ClassE::methodE{"cost":0.8,"consumption_time":7}	{"cost": 0.2,"consumption_time":7}
