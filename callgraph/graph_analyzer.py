@@ -21,7 +21,8 @@ def do_dump_to_file(dg, f, delim, attr_needed):
     for e in dg.edges:
         n += 1
         if attr_needed:
-            f.write("{}{}{}{}{}\n".format(e[0], json.dumps(dg.nodes[e[0]]), delim, e[1], json.dumps(dg.nodes[e[1]])))
+            f.write("{}{}{}{}{}{}{}\n".format(e[0], json.dumps(dg.nodes[e[0]]), delim, e[1], json.dumps(dg.nodes[e[1]]),
+                                              delim, json.dumps(dg.edges[e[0],e[1]])))
         else:
             f.write("{}{}{}\n".format(e[0], delim, e[1]))
         #if n % 1000 == 0:
@@ -55,7 +56,7 @@ def do_remove_edge_from_file(dg, file, delim):
                 break
             line = line.strip()
             e = line.split(delim)
-            if e is None or type(e) is not list or len(e) != 2:
+            if e is None or type(e) is not list or len(e) not in (2, 3):
                 sys.stderr.write("Error: wrong edge data:{}\n", line)
             else:
                 s, sa = split_node(e[0])
@@ -104,10 +105,10 @@ def do_remove_edge(dg, args:dict):
     return False
 
 
-def add_edge(dg, edge):
+def add_edge(dg, edge, att):
     n = []
     a = []
-    for _n in edge:
+    for _n in edge[0:2]:
         _n, _na = split_node(_n)
         n.append(_n)
         a.append(_na)
@@ -116,6 +117,8 @@ def add_edge(dg, edge):
     if n[0] == n[1]:
         return False
     dg.add_edge(n[0], n[1])
+    for k in att.keys():
+        dg.edges[n[0], n[1]][k] = att[k]
     for _n, _a in zip(n, a):
         dg.nodes[_n].clear()
         for k in _a.keys():
@@ -132,11 +135,15 @@ def do_add_edge_from_file(dg, file, delim):
                 break
             line = line.strip()
             e = line.split(delim)
-            if e is None or type(e) is not list or len(e) != 2:
+            if e is None or type(e) is not list or len(e) not in (2, 3):
                 sys.stderr.write("Error: wrong edge data:{}\n".format(line))
                 sys.stderr.flush()
             else:
-                if add_edge(dg, e):
+                if len(e) == 2:
+                    att = {}
+                else:
+                    att = json.loads(e[2])
+                if add_edge(dg, e, att):
                     n += 1
                     if n % 1000 == 0:
                         sys.stderr.write("{}..".format(n))
@@ -271,6 +278,13 @@ def do_callgraph(dg, args:dict):
     return False
 
 
+def walker_evaluate(__G__, __e__, __a__):
+    __s__ = __e__
+    for _ in sorted([_ for _ in __a__.keys()], key=len, reverse=True):
+        __s__ = __s__.replace(_, str(__a__[_]))
+    return eval(__s__)
+
+
 def walker_action(G, args):
     fp = args["fp"]
     if "ld" in args.keys():
@@ -294,6 +308,10 @@ def walker_action(G, args):
         rp = True
     else:
         rp = False
+    if "e" in args.keys():
+        e = args["e"]
+    else:
+        e = None
 
     if len(bp) < ld or (hd is not None and hd < len(bp)):
         dump_needed = False
@@ -303,6 +321,18 @@ def walker_action(G, args):
         dump_needed = True
     else:
         dump_needed = False
+    if e is not None:
+        try:
+            a = {}
+            for prop in e["props"].keys():
+                a[prop] = sum([G.nodes[_][prop] for _ in bp])
+                if len(bp) > 1:
+                    a[prop] += sum([G.edges[bp[i],bp[i+1]][prop] for i in range(0, len(bp)-1)])
+            if not walker_evaluate(G, e["condition"], a):
+                dump_needed = False
+        except Exception as e:
+            sys.stderr.write("Error: during evaluating condition for path: {}\n".format(bp))
+            dump_needed = False
 
     if dump_needed:
         if "a" in args.keys():
@@ -329,6 +359,10 @@ def walk_naive(G, bpl, action, action_args):
         hd = action_args["hd"]
     else:
         hd = None
+    if "e" in action_args.keys():
+        equation = action_args["e"]
+    else:
+        equation = None
     
     for bp in bpl:
         action_args["bp"] = bp
@@ -337,13 +371,28 @@ def walk_naive(G, bpl, action, action_args):
             tl = [_ for _ in G[bp[len(bp)-1]].keys()]
         else:
             tl = []
+        w = []
         for t in tl:
-            w = []
             if (hd is None or len(bp) < hd) and t not in bp:
                 p = [_ for _ in bp]
-                p.append(t)
-                w.append(p)
-            walk_naive(G, w, action, action_args)
+                if equation is None:
+                    p.append(t)
+                    w.append(p)
+                else:
+                    try:
+                        a = {}
+                        for prop in equation["props"].keys():
+                            a[prop] = sum([G.nodes[_][prop] for _ in p])
+                            if len(p) > 1:
+                                a[prop] += sum([G.edges[p[i],p[i+1]][prop] for i in range(0, len(p)-1)])
+                        #if walker_evaluate(G, equation["condition"], a):
+                        p.append(t)
+                        w.append(p)
+                    except Exception as ex:
+                        sys.stderr.write("Error: during evaluating condition for path: {}\n".format(p));
+                        sys.stderr.write(traceback.format_exc())
+                        sys.stderr.flush()
+        walk_naive(G, w, action, action_args)
 
 
 def do_walk_naive(dg, args:dict):
@@ -369,6 +418,16 @@ def do_walk_naive(dg, args:dict):
         walker_args["a"] = args["a"]
     if "rp" in args.keys():
         walker_args["rp"] = args["rp"]
+    if "e" in args.keys():
+        p = re.compile(r"^([^:]+):(.+)$")
+        m = p.search(args["e"])
+        if m is None:
+            sys.stderr.write("Invalid option value for -e:{}".format(args["e"]))
+        else:
+            att = {"props":{},"condition":m.group(2)}
+            for prop in m.group(1).split(","):
+                att["props"][prop] = 0
+            walker_args["e"] = att
     if "r" in args.keys():
         dg = dg.reverse(copy=True)
     if "sf" in args.keys():
@@ -457,11 +516,148 @@ def do_grep_edge(dg, args:dict):
     return False
 
 
+def do_simulate(dg, args:dict):
+    rG = dg.reverse(copy=True)
+    G = rG.reverse(copy=True)
+    if "dt" in args.keys():
+        dt = float(args["dt"])
+    else:
+        dt = 0.1
+    err = 0
+    for n in G.nodes:
+        if "consumption_time" not in G.nodes[n].keys():
+            err += 1
+            sys.stderr.write("Error: node {} doesn't has 'consumption_time' property".format(n))
+            sys.stderr.flush()
+        else:
+            try:
+                _ = float(G.nodes[n]["consumption_time"])
+                if _ <= 0:
+                    err += 1
+                    sys.stderr.write("Error: node {} has negative 'consumption_time' property:{}".format(n, _))
+                    sys.stderr.flush()
+            except:
+                err += 1
+                sys.stderr.write("Error: node {} has invalid 'consumption_time' property".format(n))
+                sys.stderr.flush()
+    for e in G.edges:
+        if "consumption_time" not in G.edges[e[0],e[1]].keys():
+            err += 1
+            sys.stderr.write("Error: edge ({},{}) doesn't has 'consumption_time' property".format(e[0],e[1]))
+            sys.stderr.flush()
+        else:
+            try:
+                _ = float(G.edges[e[0],e[1]]["consumption_time"])
+                if _ <= 0:
+                    err += 1
+                    sys.stderr.write("Error: edge ({},{}) has negative 'consumption_time' property:{}".format(e[0],e[1], _))
+                    sys.stderr.flush()
+            except:
+                err += 1
+                sys.stderr.write("Error: edge ({},{}) has invalid 'consumption_time' property".format(e[0],e[1]))
+                sys.stderr.flush()
+    if err != 0:
+        sys.stderr.write("Error: {} problem(s) found\n".format(err))
+        return False
+
+    nodeid_list = [_  for _ in G.nodes]
+    nodeatt_list = [None for _ in G.nodes]
+    edge_matrix = []
+    for _ in range(0, len(nodeid_list)):
+        edge_matrix.append([None for _ in range(0, len(nodeid_list))])
+    for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
+        nodeatt_list[i] = {
+            "forked": len(G[n].keys()),
+            "joins": len(rG[n].keys()),
+            "joined": len(rG[n].keys()),
+            "completed": False,
+            "consumption_time": G.nodes[n]["consumption_time"],
+            "consumed_time": 0,
+            "start_time": None,
+            "end_time": None,
+        }
+    for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
+        for j,m in zip(range(0, len(nodeid_list)), nodeid_list):
+            if G.has_edge(n, m):
+                edge_matrix[i][j] = {
+                    "forked": len(G[n].keys()),
+                    "joins": len(rG[n].keys()),
+                    "joined": len(rG[n].keys()),
+                    "completed": False,
+                    "consumption_time": G.edges[n,m]["consumption_time"],
+                    "consumed_time": 0,
+                    "start_time": None,
+                    "end_time": None,
+                }
+    rG = None
+    time = 0
+    edges_to_start = []
+    while True:
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            if nodeatt_list[i]["joined"] == nodeatt_list[i]["joins"]:
+                if nodeatt_list[i]["start_time"] is None:
+                    nodeatt_list[i]["start_time"] = time
+                    nodeatt_list[i]["consumed_time"] = 0
+        edges_to_start_next_time = []
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            if nodeatt_list[i]["start_time"] is not None and not nodeatt_list[i]["completed"]:
+                nodeatt_list[i]["consumed_time"] += dt
+                if nodeatt_list[i]["consumed_time"] >= nodeatt_list[i]["consumption_time"]:
+                    nodeatt_list[i]["end_time"] = time + dt
+                    nodeatt_list[i]["completed"] = True
+                    for t in G[n].keys():
+                        edges_to_start_next_time.append((i, nodeid_list.index(t)))
+                    sys.stderr.write("Time {}: node {} completed\n".format(time+dt,n))
+                    sys.stderr.flush()
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            for j,m in zip(range(0, len(nodeatt_list)), nodeid_list):
+                if (i,j) in edges_to_start:
+                    if edge_matrix[i][j]["start_time"] is None:
+                        edge_matrix[i][j]["start_time"] = time
+                        edge_matrix[i][j]["consumed_time"] = 0
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            for j,m in zip(range(0, len(nodeatt_list)), nodeid_list):
+                if edge_matrix[i][j] is not None:
+                    if edge_matrix[i][j]["start_time"] is not None and not edge_matrix[i][j]["completed"]:
+                        edge_matrix[i][j]["consumed_time"] += dt
+                        if edge_matrix[i][j]["consumed_time"] >= edge_matrix[i][j]["consumption_time"]:
+                            edge_matrix[i][j]["end_time"] = time + dt
+                            edge_matrix[i][j]["completed"] = True
+                            nodeatt_list[j]["joined"] += 1
+                            sys.stderr.write("Time {}: edge ({},{}) completed\n".format(time+dt,n,m))
+                            sys.stderr.flush()
+        edges_to_start = edges_to_start_next_time
+        time += dt
+        if time % 10 == 0:
+            sys.stderr.write("{} passed..".format(time))
+        task_remained = False
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            if nodeatt_list[i] is not None and not nodeatt_list[i]["completed"]:
+                task_remained = True
+                break
+        if not task_remained:
+            for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+                for j,m in zip(range(0, len(nodeatt_list)), nodeid_list):
+                    if edge_matrix[i][j] is not None and not edge_matrix[i][j]["completed"]:
+                        task_remained = True
+                        break
+                if task_remained:
+                    break
+        if not task_remained:
+            break
+    sys.stderr.write("Finished. Total consumption time: {}\n".format(time))
+    sys.stderr.flush()
+
+
 def do_quit(dg, args:dict):
     return True
 
 
 commands = {
+    "sim": do_simulate,
+    "simu": do_simulate,
+    "simulate": do_simulate,
+    "simulate": do_simulate,
     "walk": do_walk_naive,
     "walks": do_walk_naive,
     "grep-node": do_grep_node,
@@ -471,12 +667,24 @@ commands = {
     "grep_edge": do_grep_edge,
     "grepedge": do_grep_edge,
     "dump": do_dump,
+    "rm-edge": do_remove_edge,
+    "rm_edge": do_remove_edge,
+    "rmedge": do_remove_edge,
+    "rm-edges": do_remove_edge,
+    "rm_edges": do_remove_edge,
+    "rmedges": do_remove_edge,
     "remove-edge": do_remove_edge,
     "remove_edge": do_remove_edge,
     "removeedge": do_remove_edge,
+    "remove-edges": do_remove_edge,
+    "remove_edges": do_remove_edge,
+    "removeedges": do_remove_edge,
     "add-edge": do_add_edge,
     "add_edge": do_add_edge,
     "addedge": do_add_edge,
+    "add-edges": do_add_edge,
+    "add_edges": do_add_edge,
+    "addedges": do_add_edge,
     "callgraph": do_callgraph,
     "quit": do_quit,
     "exit": do_quit
