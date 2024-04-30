@@ -569,7 +569,7 @@ def do_simulate(dg, args:dict):
         nodeatt_list[i] = {
             "forked": len(G[n].keys()),
             "joins": len(rG[n].keys()),
-            "joined": len(rG[n].keys()),
+            "joined": 0,
             "completed": False,
             "consumption_time": G.nodes[n]["consumption_time"],
             "consumed_time": 0,
@@ -582,7 +582,7 @@ def do_simulate(dg, args:dict):
                 edge_matrix[i][j] = {
                     "forked": len(G[n].keys()),
                     "joins": len(rG[n].keys()),
-                    "joined": len(rG[n].keys()),
+                    "joined": 0,
                     "completed": False,
                     "consumption_time": G.edges[n,m]["consumption_time"],
                     "consumed_time": 0,
