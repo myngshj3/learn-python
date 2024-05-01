@@ -567,7 +567,8 @@ def do_simulate(dg, args:dict):
         edge_matrix.append([None for _ in range(0, len(nodeid_list))])
     for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
         nodeatt_list[i] = {
-            "forked": len(G[n].keys()),
+            "forks": len(G[n].keys()),
+            "forked": 0,
             "joins": len(rG[n].keys()),
             "joined": 0,
             "completed": False,
@@ -580,9 +581,6 @@ def do_simulate(dg, args:dict):
         for j,m in zip(range(0, len(nodeid_list)), nodeid_list):
             if G.has_edge(n, m):
                 edge_matrix[i][j] = {
-                    "forked": len(G[n].keys()),
-                    "joins": len(rG[n].keys()),
-                    "joined": 0,
                     "completed": False,
                     "consumption_time": G.edges[n,m]["consumption_time"],
                     "consumed_time": 0,
