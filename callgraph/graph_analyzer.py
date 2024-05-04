@@ -1,9 +1,11 @@
 
 import json
 import networkx as nx
+import numpy as np
 import re
 from basic_workflow_simulator import BasicWorkflowSimulator, BasicWorkflowSimulatorController
 #from workflow_time_simulator import WorkflowTimeSimulator, WorkflowTimeSimulatorController
+from scipy import stats
 import sys
 import traceback
 
@@ -828,10 +830,8 @@ def do_simulate(dg, args:dict):
         if not controller.test(simulator_args):
             return False
     if once:
-        print("One time simulation")
         controller.run(simulator_args, once=True)
     else:
-        print("Statistical test")
         controller.run(simulator_args, once=False)
     return False
 
@@ -867,6 +867,70 @@ def do_save(dg, args):
             f.write(json.dumps(json_data, indent=2))
     else:
         sys.stderr.write(json.dumps(json_data, indent=2))
+
+
+def do_calcprog(dg, args):
+    if "c" in args.keys():
+        confidence = float(args["c"])
+    else:
+        confidence = 0.9
+    if "nf" in args.keys():
+        with open(args["nf"], "r") as f:
+            samples = {}
+            line = f.readline()
+            if line is not None and len(line) != 0:
+                while True:
+                    line = f.readline()
+                    if line is None or len(line) == 0:
+                        break
+                    line = line.strip()
+                    n = line.split("\t")
+                    if n[0] in samples.keys():
+                        samples[n[0]].append(float(n[1]))
+                    else:
+                        samples[n[0]] = [float(n[1])]
+            for node in samples.keys():
+                if node in dg.nodes:
+                    a = 1.0 * np.array(samples[node])
+                    n = len(a)
+                    m, se = np.mean(a), stats.sem(a)
+                    v = np.var(a)
+                    h = se * stats.t.ppf((1+confidence)/2.0, n-1)
+                    dg.nodes[node][BasicWorkflowSimulator.K_CONSUMPTION_TIME_MEAN] = m
+                    dg.nodes[node][BasicWorkflowSimulator.K_CONSUMPTION_TIME_VARIANCE] = v
+                    dg.nodes[node][BasicWorkflowSimulator.K_CONSUMPTION_TIME_MIN] = m-h
+                    dg.nodes[node][BasicWorkflowSimulator.K_CONSUMPTION_TIME_MAX] = m+h
+                    dg.nodes[node][BasicWorkflowSimulator.K_CONSUMPTION_TIME_RANDOM] = BasicWorkflowSimulator.K_NORMAL
+                    
+    if "ef" in args.keys():
+        with open(args["ef"], "r") as f:
+            samples = {}
+            line = f.readline()
+            if line is not None and len(line) != 0:
+                while True:
+                    line = f.readline()
+                    if line is None or len(line) == 0:
+                        break
+                    line = line.strip()
+                    e = line.split("\t")
+                    ek = "{},{}".format(e[0],e[1])
+                    if ek in samples.keys():
+                        samples[ek].append(float(e[2]))
+                    else:
+                        samples[ek] = [float(e[2])]
+            for ek in samples.keys():
+                e = ek.split(",")
+                if dg.has_edge(e[0],e[1]):
+                    a = 1.0 * np.array(samples[ek])
+                    n = len(a)
+                    m, se = np.mean(a), stats.sem(a)
+                    v = np.var(a)
+                    h = se * stats.t.ppf((1+confidence)/2.0, n-1)
+                    dg.edges[e[0],e[1]][BasicWorkflowSimulator.K_CONSUMPTION_TIME_MEAN] = m
+                    dg.edges[e[0],e[1]][BasicWorkflowSimulator.K_CONSUMPTION_TIME_VARIANCE] = v
+                    dg.edges[e[0],e[1]][BasicWorkflowSimulator.K_CONSUMPTION_TIME_MIN] = m-h
+                    dg.edges[e[0],e[1]][BasicWorkflowSimulator.K_CONSUMPTION_TIME_MAX] = m+h
+                    dg.edges[e[0],e[1]][BasicWorkflowSimulator.K_CONSUMPTION_TIME_RANDOM] = BasicWorkflowSimulator.K_NORMAL
 
 
 def do_quit(dg, args:dict):
@@ -908,6 +972,7 @@ commands = {
     "callgraph": do_callgraph,
     "load": do_load,
     "save": do_save,
+    "calcprob": do_calcprog,
     "quit": do_quit,
     "exit": do_quit
 }

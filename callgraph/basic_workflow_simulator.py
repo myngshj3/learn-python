@@ -40,6 +40,9 @@ class BasicWorkflowSimulator(Simulator):
     K_EDGE_PROCESS_FINISHED = "edge-process-finished"
     K_EDGE_PROCESS_PROGRESS = "edge-process-progress"
 
+    K_NORMAL = "normal"
+    K_UNIFORM = "uniform"
+
     K_STARTED = "started"
     K_PROGRESSING = "progressing"
     K_FINISHED = "finished"
