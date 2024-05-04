@@ -2,6 +2,8 @@
 import json
 import networkx as nx
 import re
+from basic_workflow_simulator import BasicWorkflowSimulator, BasicWorkflowSimulatorController
+#from workflow_time_simulator import WorkflowTimeSimulator, WorkflowTimeSimulatorController
 import sys
 import traceback
 
@@ -516,7 +518,11 @@ def do_grep_edge(dg, args:dict):
     return False
 
 
-def do_simulate(dg, args:dict):
+def simulate_workflow(dg, args:dict):
+    return simulate_simple_workflow(dg, args)
+
+
+def simulate_simple_workflow(dg, args:dict):
     rG = dg.reverse(copy=True)
     G = rG.reverse(copy=True)
     if "dt" in args.keys():
@@ -645,6 +651,222 @@ def do_simulate(dg, args:dict):
             break
     sys.stderr.write("Finished. Total consumption time: {}\n".format(time))
     sys.stderr.flush()
+    return False
+
+
+def simulate_workflow(dg, args:dict):
+    rG = dg.reverse(copy=True)
+    G = rG.reverse(copy=True)
+    if "dt" in args.keys():
+        dt = float(args["dt"])
+    else:
+        dt = 0.1
+    err = 0
+    for n in G.nodes:
+        if "consumption_time" not in G.nodes[n].keys():
+            err += 1
+            sys.stderr.write("Error: node {} doesn't has 'consumption_time' property".format(n))
+            sys.stderr.flush()
+        else:
+            try:
+                _ = float(G.nodes[n]["consumption_time"])
+                if _ <= 0:
+                    err += 1
+                    sys.stderr.write("Error: node {} has negative 'consumption_time' property:{}".format(n, _))
+                    sys.stderr.flush()
+            except:
+                err += 1
+                sys.stderr.write("Error: node {} has invalid 'consumption_time' property".format(n))
+                sys.stderr.flush()
+    for e in G.edges:
+        if "consumption_time" not in G.edges[e[0],e[1]].keys():
+            err += 1
+            sys.stderr.write("Error: edge ({},{}) doesn't has 'consumption_time' property".format(e[0],e[1]))
+            sys.stderr.flush()
+        else:
+            try:
+                _ = float(G.edges[e[0],e[1]]["consumption_time"])
+                if _ <= 0:
+                    err += 1
+                    sys.stderr.write("Error: edge ({},{}) has negative 'consumption_time' property:{}".format(e[0],e[1], _))
+                    sys.stderr.flush()
+            except:
+                err += 1
+                sys.stderr.write("Error: edge ({},{}) has invalid 'consumption_time' property".format(e[0],e[1]))
+                sys.stderr.flush()
+    if err != 0:
+        sys.stderr.write("Error: {} problem(s) found\n".format(err))
+        return False
+
+    nodeid_list = [_  for _ in G.nodes]
+    nodeatt_list = [None for _ in G.nodes]
+    edge_matrix = []
+    for _ in range(0, len(nodeid_list)):
+        edge_matrix.append([None for _ in range(0, len(nodeid_list))])
+    for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
+        nodeatt_list[i] = {
+            "forks": len(G[n].keys()),
+            "forked": 0,
+            "joins": len(rG[n].keys()),
+            "joined": 0,
+            "completed": False,
+            "consumption_time": G.nodes[n]["consumption_time"],
+            "consumed_time": 0,
+            "start_time": None,
+            "end_time": None,
+        }
+    for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
+        for j,m in zip(range(0, len(nodeid_list)), nodeid_list):
+            if G.has_edge(n, m):
+                edge_matrix[i][j] = {
+                    "completed": False,
+                    "consumption_time": G.edges[n,m]["consumption_time"],
+                    "consumed_time": 0,
+                    "start_time": None,
+                    "end_time": None,
+                }
+    rG = None
+    time = 0
+    edges_to_start = []
+    while True:
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            if nodeatt_list[i]["joined"] == nodeatt_list[i]["joins"]:
+                if nodeatt_list[i]["start_time"] is None:
+                    nodeatt_list[i]["start_time"] = time
+                    nodeatt_list[i]["consumed_time"] = 0
+        edges_to_start_next_time = []
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            if nodeatt_list[i]["start_time"] is not None and not nodeatt_list[i]["completed"]:
+                nodeatt_list[i]["consumed_time"] += dt
+                if nodeatt_list[i]["consumed_time"] >= nodeatt_list[i]["consumption_time"]:
+                    nodeatt_list[i]["end_time"] = time + dt
+                    nodeatt_list[i]["completed"] = True
+                    for t in G[n].keys():
+                        edges_to_start_next_time.append((i, nodeid_list.index(t)))
+                    sys.stderr.write("Time {}: node {} completed\n".format(time+dt,n))
+                    sys.stderr.flush()
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            for j,m in zip(range(0, len(nodeatt_list)), nodeid_list):
+                if (i,j) in edges_to_start:
+                    if edge_matrix[i][j]["start_time"] is None:
+                        edge_matrix[i][j]["start_time"] = time
+                        edge_matrix[i][j]["consumed_time"] = 0
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            for j,m in zip(range(0, len(nodeatt_list)), nodeid_list):
+                if edge_matrix[i][j] is not None:
+                    if edge_matrix[i][j]["start_time"] is not None and not edge_matrix[i][j]["completed"]:
+                        edge_matrix[i][j]["consumed_time"] += dt
+                        if edge_matrix[i][j]["consumed_time"] >= edge_matrix[i][j]["consumption_time"]:
+                            edge_matrix[i][j]["end_time"] = time + dt
+                            edge_matrix[i][j]["completed"] = True
+                            nodeatt_list[j]["joined"] += 1
+                            sys.stderr.write("Time {}: edge ({},{}) completed\n".format(time+dt,n,m))
+                            sys.stderr.flush()
+        edges_to_start = edges_to_start_next_time
+        time += dt
+        if time % 10 == 0:
+            sys.stderr.write("{} passed..".format(time))
+        task_remained = False
+        for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+            if nodeatt_list[i] is not None and not nodeatt_list[i]["completed"]:
+                task_remained = True
+                break
+        if not task_remained:
+            for i,n in zip(range(0, len(nodeatt_list)), nodeid_list):
+                for j,m in zip(range(0, len(nodeatt_list)), nodeid_list):
+                    if edge_matrix[i][j] is not None and not edge_matrix[i][j]["completed"]:
+                        task_remained = True
+                        break
+                if task_remained:
+                    break
+        if not task_remained:
+            break
+    sys.stderr.write("Finished. Total consumption time: {}\n".format(time))
+    sys.stderr.flush()
+    return False
+
+
+def do_simulate(dg, args:dict):
+    simulator_args = {}
+    for k in args.keys():
+        simulator_args[k] = args[k]
+#    return simulate_simple_workflow(dg, args)
+    if "k" not in args.keys():
+        k = "wf"
+        #simulate_workflow(dg, args)
+        #return False
+    else:
+        k = args["k"]
+    if k in ("wf", "workflow"):
+        simulatorClass = BasicWorkflowSimulator
+        controllerClass = BasicWorkflowSimulatorController
+    #elif k in ("time",):
+    #    simulatorClass = WorkflowTimeSimulator
+    #    controllerClass = WorkflowTimeSimulatorController
+    else:
+        sys.stderr.write("Error: no such kind simulator: {}\n", k)
+        return False
+    if "st" in args.keys():
+        if args["st"] is None:
+            once = False
+        else:
+            once = bool(args["st"])
+    else:
+        once = True
+    simulator_args["st"] = not once
+    if "i" not in args.keys():
+        simulator_args["i"] = 100
+    else:
+        simulator_args["i"] = int(args["i"])
+    if "dt" not in args.keys():
+        simulator_args["dt"] = 0.1
+    else:
+        simulator_args["dt"] = float(args["dt"])
+    simulator = simulatorClass(dg, simulator_args)
+    controller = controllerClass(simulator, simulator_args)
+    if "t" in args.keys():
+        if not controller.test(simulator_args):
+            return False
+    if once:
+        print("One time simulation")
+        controller.run(simulator_args, once=True)
+    else:
+        print("Statistical test")
+        controller.run(simulator_args, once=False)
+    return False
+
+
+def do_load(dg, args):
+    if "f" in args.keys():
+        with open(args["f"], "r") as f:
+            json_data = json.load(f)
+            dg.graph.clear()
+            for k in json_data["graph"].keys():
+                dg.graph[k] = json_data["graph"][k]
+            for n in [_ for _ in dg.nodes]:
+                dg.remove_node(n)
+            for n in json_data["nodes"]:
+                dg.add_node(n[0])
+                for k in n[1].keys():
+                    dg.nodes[n[0]][k] = n[1][k]
+            for e in json_data["edges"]:
+                dg.add_edge(e[0][0], e[0][1])
+                for k in e[1].keys():
+                    dg.edges[e[0][0], e[0][1]][k] = e[1][k]
+    return False
+
+
+def do_save(dg, args):
+    json_data = {
+        "graph": dg.graph,
+        "nodes": [[_, dg.nodes[_]] for _ in dg.nodes],
+        "edges": [[_, dg.edges[_[0],_[1]]] for _ in dg.edges],
+    }
+    if "f" in args.keys():
+        with open(args["f"], "w") as f:
+            f.write(json.dumps(json_data, indent=2))
+    else:
+        sys.stderr.write(json.dumps(json_data, indent=2))
 
 
 def do_quit(dg, args:dict):
@@ -684,6 +906,8 @@ commands = {
     "add_edges": do_add_edge,
     "addedges": do_add_edge,
     "callgraph": do_callgraph,
+    "load": do_load,
+    "save": do_save,
     "quit": do_quit,
     "exit": do_quit
 }

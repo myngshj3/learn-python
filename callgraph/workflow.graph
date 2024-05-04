@@ -1,0 +1,397 @@
+{
+  "graph": {
+    "name": "workflow-01"
+  },
+  "nodes": [
+    [
+      "ProjectDesign",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 15,
+        "consumption-time-min": 10,
+        "consumption-time-max": 20,
+        "consumption-time-variance": 5.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "ProjectEstimation",
+      {
+        "cost": 0.2,
+        "consumption-time-mean": 4,
+        "consumption-time-min": 2,
+        "consumption-time-max": 6,
+        "consumption-time-variance": 2.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "ProjectPlanning",
+      {
+        "cost": 0.5,
+        "consumption-time-mean": 10,
+        "consumption-time-min": 5,
+        "consumption-time-max": 15,
+        "consumption-time-variance": 5.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "ProjectProgramLaunch",
+      {
+        "cost": 0.3,
+        "consumption-time-mean": 1,
+        "consumption-time-min": 5,
+        "consumption-time-max": 15,
+        "consumption-time-variance": 5.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "ProjectProgramming",
+      {
+        "cost": 0.3,
+        "consumption-time-mean": 7,
+        "consumption-time-min": 3,
+        "consumption-time-max": 11,
+        "consumption-time-variance": 4.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskA1",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 10,
+        "consumption-time-min": 6,
+        "consumption-time-max": 14,
+        "consumption-time-variance": 4.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskA2",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 9,
+        "consumption-time-min": 6,
+        "consumption-time-max": 12,
+        "consumption-time-variance": 3.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskA3",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 8,
+        "consumption-time-min": 5,
+        "consumption-time-max": 11,
+        "consumption-time-variance": 4.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskA",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 4,
+        "consumption-time-min": 6,
+        "consumption-time-max": 8,
+        "consumption-time-variance": 2.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskB1",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 12,
+        "consumption-time-min": 8,
+        "consumption-time-max": 16,
+        "consumption-time-variance": 5.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskB2",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 8,
+        "consumption-time-min": 4,
+        "consumption-time-max": 12,
+        "consumption-time-variance": 5.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskB3",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 11,
+        "consumption-time-min": 7,
+        "consumption-time-max": 15,
+        "consumption-time-variance": 4.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskB",
+      {
+        "cost": 0.2,
+        "consumption-time": 8,
+        "consumption-time-min": 5,
+        "consumption-time-max": 11,
+        "consumption-time-variance": 3.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskC1",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 5,
+        "consumption-time-min": 3,
+        "consumption-time-max": 7,
+        "consumption-time-variance": 2.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskC2",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 20,
+        "consumption-time-min": 16,
+        "consumption-time-max": 24,
+        "consumption-time-variance": 4.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskC3",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 7,
+        "consumption-time-min": 4,
+        "consumption-time-max": 11,
+        "consumption-time-variance": 3.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "TaskC",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 9,
+        "consumption-time-min": 6,
+        "consumption-time-max": 12,
+        "consumption-time-variance": 3.0,
+        "consumption-time-random": "normal"
+      }
+    ],
+    [
+      "ProjectConclusion",
+      {
+        "cost": 0.1,
+        "consumption-time-mean": 21,
+        "consumption-time-min": 16,
+        "consumption-time-max": 26,
+        "consumption-time-variance": 4.0,
+        "consumption-time-random": "normal"
+      }
+    ]
+  ],
+  "edges": [
+    [
+      [
+        "ProjectDesign",
+        "ProjectProgramming"
+      ],
+      {
+        "cost": 0.3,
+        "consumption-time": 2
+      }
+    ],
+    [
+      [
+        "ProjectEstimation",
+        "ProjectDesign"
+      ],
+      {
+        "cost": 0.5,
+        "consumption-time": 1
+      }
+    ],
+    [
+      [
+        "ProjectPlanning",
+        "ProjectEstimation"
+      ],
+      {
+        "cost": 0.5,
+        "consumption-time": 1
+      }
+    ],
+    [
+      [
+        "ProjectProgramLaunch",
+        "TaskA"
+      ],
+      {
+        "cost": 0.3,
+        "consumption-time": 3
+      }
+    ],
+    [
+      [
+        "ProjectProgramLaunch",
+        "TaskB"
+      ],
+      {
+        "cost": 0.3,
+        "consumption-time": 3
+      }
+    ],
+    [
+      [
+        "ProjectProgramLaunch",
+        "TaskC"
+      ],
+      {
+        "cost": 0.3,
+        "consumption-time": 3
+      }
+    ],
+    [
+      [
+        "ProjectProgramming",
+        "ProjectProgramLaunch"
+      ],
+      {
+        "cost": 0.3,
+        "consumption-time": 2
+      }
+    ],
+    [
+      [
+        "TaskA1",
+        "TaskA2"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskA2",
+        "TaskA3"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskA3",
+        "ProjectConclusion"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskA",
+        "TaskA1"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskB1",
+        "TaskB2"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskB2",
+        "TaskB3"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskB3",
+        "ProjectConclusion"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskB",
+        "TaskB1"
+      ],
+      {
+        "cost": 0.2,
+        "consumption-time": 5
+      }
+    ],
+    [
+      [
+        "TaskC1",
+        "TaskC2"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskC2",
+        "TaskC3"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskC3",
+        "ProjectConclusion"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ],
+    [
+      [
+        "TaskC",
+        "TaskC1"
+      ],
+      {
+        "cost": 0.1,
+        "consumption-time": 4
+      }
+    ]
+  ]
+}
