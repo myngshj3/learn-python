@@ -282,9 +282,31 @@ class BasicWorkflowSimulator(Simulator):
             # collect active controllers
             active_controllers = []
             for c in self.controller_nodes:
-                if self.G.nodes[c][self.K_STATE] != self.K_FINISHED:
+                if self.G.nodes[c][self.K_STATE] is None:
+                    preceeds_completed = True
+                    for p in self.rG[c].keys():
+                        if self.G.nodes[p][self.K_STATE] != self.K_FINISHED:
+                            preceeds_completed = False
+                            break
+                    if preceeds_completed:
+                        active_controllers.append(c)
+                        self.G.nodes[c][self.K_STATE] = self.K_STARTED
+                        print(c)
+                elif self.G.nodes[c][self.K_STATE] == self.K_STARTED:
                     active_controllers.append(c)
-                    #print(active_controllers)
+                else:
+                    pass
+            # collect active controlflows
+            active_controlflows = []
+            for cf in self.controlflow_edges:
+                if self.G.edges[cf[0], cf[1]][self.K_STATE] is None:
+                    if self.G.nodes[cf[0]][self.K_STATE] == self.K_FINISHED:
+                        active_controlflows.append(cf)
+                        self.G.nodes[cf[0]][self.K_STATE] = self.K_STARTED
+                elif self.G.edges[cf[0], cf[1]][self.K_STATE] == self.K_STARTED:
+                    active_controlflows.append(cf)
+                else:
+                    pass
             # collect active dataflows
             active_dataflows = []
             for c in active_controllers:
@@ -323,6 +345,11 @@ class BasicWorkflowSimulator(Simulator):
                                 #else:
                                 #    fp.write("{} {} consumed {}[{}] and generated {}[{}] at {}.\n".format(self.K_DATAFLOW, str((s,t)), 0, source_unit, 0, target_unit, time+dt))
                                 #    fp.flush()
+            # drive controlflows
+            for cf in active_controlflows:
+                self.G.edges[cf[0], cf[1]][self.K_CONSUMED_TIME] += dt
+                if self.G.edges[cf[0], cf[1]][self.K_CONSUMPTION_TIME] <= self.G.edges[cf[0], cf[1]][self.K_CONSUMED_TIME]:
+                    self.G.edges[cf[0], cf[1]][self.K_STATE] = self.K_FINISHED
             # check if strages closed
             for s in self.storage_nodes:
                 if self.G.nodes[s][self.K_STATE] != self.K_CLOSED:
@@ -350,6 +377,10 @@ class BasicWorkflowSimulator(Simulator):
                             self.G.nodes[c][self.K_STATE] = self.K_FINISHED
                             fp.write("{} {} finished at {}.\n".format(self.K_CONTROLLER, c, time+dt))
                             fp.flush()
+            # check if controlflows finished
+            #for cf in active_controlflows:
+            #    if self.G.edges[cf[0], cf[1]][self.K_STATE] == self.K_FINISHED:
+            #        pass
             # make progress
             time += dt
             self.process_progress(fp, time)
@@ -434,6 +465,12 @@ class BasicWorkflowSimulator(Simulator):
 
 class BasicWorkflowSimulatorController(SimulatorController):
 
+    K_MEAN = "-mean"
+    K_VARIANCE = "-variance"
+    K_MIN = "-min"
+    K_MAX = "-max"
+    K_RANDOM = "-random"
+
     def __init__(self, simulator, args=None):
         super().__init__(simulator)
         self.simulator_args = {}
@@ -510,15 +547,17 @@ class BasicWorkflowSimulatorController(SimulatorController):
             return False
         #self.simulator.set_tested(True)
         graph = self.simulator.get_graph()
-        #rng = RandomGenerator(simulator_args["dt"],
-        #                      RandomGenerator.K_RANDOM_TIME_MAX)
+        rng = RandomGenerator(simulator_args["dt"],
+                              RandomGenerator.K_RANDOM_TIME_MAX)
         # run simulation
         if once:
+            self.apply_uncertain_factors(rng, graph)
             self.simulator.restore(graph)
             self.simulator.simulate(simulator_args)
             return False
         else:
             for i in range(0, simulator_args["i"]):
+                self.apply_uncertain_factors(rng, graph)
                 self.simulator.restore(graph)
                 self.simulator.simulate(simulator_args)
                 pass
@@ -526,18 +565,33 @@ class BasicWorkflowSimulatorController(SimulatorController):
             self.describe_stats(progress_report)
             return False
 
-    def random(self, rng, a):
-        random_type = a[self.simulator.K_CONSUMPTION_TIME_RANDOM]
-        consumption_time_mean = a[self.simulator.K_CONSUMPTION_TIME_MEAN]
-        consumption_time_min = a[self.simulator.K_CONSUMPTION_TIME_MIN]
-        consumption_time_max = a[self.simulator.K_CONSUMPTION_TIME_MAX]
-        if self.simulator.K_CONSUMPTION_TIME_VARIANCE in a.keys():
-            consumption_time_variance = a[self.simulator.K_CONSUMPTION_TIME_VARIANCE]
+    def apply_uncertain_factors(self, rng, graph):
+        for e in graph.edges:
+            r = self.random(rng, graph.edges[e[0], e[1]], self.simulator.K_VELOCITY)
+            if r is not None:
+                graph.edges[e[0], e[1]][self.simulator.K_VELOCITY] = r
+            r = self.random(rng, graph.edges[e[0], e[1]], self.simulator.K_CONSUMPTION_TIME)
+            if r is not None:
+                graph.edges[e[0], e[1]][self.simulator.K_CONSUMPTION_TIME] = r
+        
+    def random(self, rng, a, p):
+
+        if p + self.K_RANDOM not in a.keys():
+            return None
+        _type = a[p + self.K_RANDOM]
+        if p + self.K_MEAN not in a.keys():
+            return None
+        _mean = a[p + self.K_MEAN]
+        if p + self.K_MIN not in a.keys():
+            return None
+        _min = a[p + self.K_MIN]
+        if p + self.K_MAX not in keys():
+            return None
+        _max = a[p + self.K_MAX]
+        if p + self.K_VARIANCE in a.keys():
+            _variance = a[p + self.K_VARIANCE]
         else:
-            consumption_time_variance = 1
-        consumption_time = rng.random(random_type,
-                                      consumption_time_mean,
-                                      consumption_time_min,
-                                      consumption_time_max,
-                                      consumption_time_variance)
-        return consumption_time
+            _variance = 1
+        val = rng.random(_type, _mean, _min, _max, _variance)
+        return val
+
