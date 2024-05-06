@@ -9,15 +9,15 @@ import traceback
 
 class Simulator:
 
-    K_CONSUMPTION_TIME = "consumption_time"
-    K_CONSUMED_TIME = "consumed_time"
+    K_CONSUMPTION_TIME = "consumption-time"
+    K_CONSUMED_TIME = "consumed-time"
     K_FORKS = "forks"
     K_FORKED = "forked"
     K_JOINS = "joins"
     K_JOINED = "joined"
     K_COMPLETED = "completed"
-    K_START_TIME = "start_time"
-    K_END_TIME = "end_time"
+    K_START_TIME = "start-time"
+    K_END_TIME = "end-time"
 
     def __init__(self):
         pass

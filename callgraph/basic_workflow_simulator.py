@@ -17,183 +17,135 @@ class BasicWorkflowSimulator(Simulator):
     K_EDGE = "edge"
     K_NAME = "name"
     K_TYPE = "type"
+    K_WORKFLOW = "workflow"
     K_DATAFLOW = "dataflow"
-    K_DATA = "data"
+    K_STORAGE = "storage"
     K_CONTROLLER = "controller"
     K_CONTROLFLOW = "controlflow"
-
     K_CONSUMPTION_TIME = "consumption-time"
+    K_CONSUMPTION_TIME_SCHEDULED = "consumption-time-scheduled"
     K_CONSUMPTION_TIME_MEAN = "consumption-time-mean"
     K_CONSUMPTION_TIME_MIN = "consumption-time-min"
     K_CONSUMPTION_TIME_MAX = "consumption-time-max"
     K_CONSUMPTION_TIME_VARIANCE = "consumption-time-variance"
     K_CONSUMPTION_TIME_RANDOM = "consumption-time-random"
+    K_START_TIME = Simulator.K_START_TIME
+    K_START_TIME_SCHEDULED = "start-time-scheduled"
+    K_END_TIME = Simulator.K_END_TIME
+    K_END_TIME_SCHEDULED = "end-time-scheduled"
+    K_INACTIVE_INTERVALS = "inactive-intervals"
+    K_DATAFLOWS = "dataflows"
+    K_PARENT = "parent"
+    K_CHILDREN = "children"
+    K_VELOCITY = "velocity"
+    K_VELOCITY_FUNCTION = "velocity-function"
+    K_TRANS_COEFFICIENCE = "trans-coefficience"
+    K_AMOUNT = "amount"
+    K_ACCUMULATED = "accumulated"
+    K_INBOUNDS = "inbounds"
+    K_OUTBOUNDS = "outbounds"
+    K_CLOSED_INBOUNDS = "closed-inbounds"
+    K_CLOSED_OUTBOUNDS = "closed-outbounds"
+    K_UNIT = "unit"
+    K_OPENED = "opened"
+    K_CLOSED = "closed"
+    K_PROGRESSING = "progressing"
+    K_STATE = "state"
+    K_PREPARED = "prepared"
+    K_ACTIVE = "active"
+    K_SUSPENDED = "suspended"
+    K_FINISHED = "finished"
+    K_UNAVAILABLE = "unavailable"
+
     K_PROGRESS_FILTER = "pf"
     K_PROGRESS_REPORT = "pr"
-    K_PROCESS_STARTED = "process-started"
-    K_PROCESS_FINISHED = "process-finished"
-    K_PROCESS_PROGRESS = "process-progress"
-    K_NODE_PROCESS_STARTED = "node-process-started"
-    K_NODE_PROCESS_FINISHED = "node-process-finished"
-    K_NODE_PROCESS_PROGRESS = "node-process-progress"
-    K_EDGE_PROCESS_STARTED = "edge-process-started"
-    K_EDGE_PROCESS_FINISHED = "edge-process-finished"
-    K_EDGE_PROCESS_PROGRESS = "edge-process-progress"
+    K_CONTROLLER_STARTED = "controller-started"
+    K_CONTROLLER_FINISHED = "controller-finished"
+    K_CONTROLLER_PROGRESS = "controller-progress"
+    K_DATAFLOW_STARTED = "dataflow-started"
+    K_DATAFLOW_FINISHED = "dataflow-finished"
+    K_DATAFLOW_PROGRESS = "dataflow-progress"
+    K_CONTROLFLOW_STARTED = "controlflow-started"
+    K_CONTROLFLOW_FINISHED = "controlflow-finished"
+    K_CONTROLFLOW_PROGRESS = "controlflow-progress"
+    K_STARTED = "started"
+    K_FINISHED = "finished"
 
     K_NORMAL = "normal"
     K_UNIFORM = "uniform"
 
-    K_STARTED = "started"
-    K_PROGRESSING = "progressing"
-    K_FINISHED = "finished"
-
-
     def __init__(self, G, args=None):
         super().__init__()
-        self.G = G
+        self.G = None
+        self.setup_graph(G)
+        self.rG = self.G.reverse(copy=True)
         self.args = {}
         if args is not None:
             for k in args.keys():
                 self.args[k] = args[k]
         self.simulator_args = {}
-        self.create_nodeid_list()
-        self.create_nodeatt_list()
-        self.create_edge_matrix()
+        self.storage_nodes = None
+        self.setup_storages()
+        self.dataflow_edges = None
+        self.setup_dataflows()
+        self.controller_nodes = None
+        self.setup_controllers()
+        self.controlflow_edges = None
+        self.setup_controlflows()
         self.tested = False
 
-    def get_nodeid_list(self):
-        return json.loads(json.dumps(self.nodeid_list))
+    def restore(self, G):
+        self.setup_graph(G)
+        self.rG = self.G.reverse(copy=True)
+        self.setup_storages()
+        self.setup_dataflows()
+        self.setup_controllers()
+        self.setup_controlflows()
 
-    def get_nodeatt_list(self):
-        return json.loads(json.dumps(self.nodeatt_list))
+    def setup_graph(self, G):
+        g = nx.DiGraph()
+        for k in G.graph.keys():
+            g.graph[k] = G.graph[k]
+        for n in G.nodes:
+            g.add_node(n)
+            for k in G.nodes[n].keys():
+                g.nodes[n][k] = G.nodes[n][k]
+        for e in G.edges:
+            g.add_edge(e[0], e[1])
+            for k in G.edges[e[0], e[1]].keys():
+                g.edges[e[0], e[1]][k] = G.edges[e[0], e[1]][k]
+        self.G = g
 
-    def get_edge_matrix(self):
-        return json.loads(json.dumps(self.edge_matrix))
-
-    def get_tested(self):
-        return self.tested
-
-    def set_tested(self, tested):
-        self.tested = tested
-
-    def test_node_attr(self, args):
-        if "fp" in args.keys():
-            fp = args["fp"]
-        else:
-            fp = sys.stderr
-        err = 0
+    def setup_storages(self):
+        storage_nodes = []
         for n in self.G.nodes:
-            if self.K_CONSUMPTION_TIME in self.G.nodes[n].keys():
-                pass
-            elif self.K_CONSUMPTION_TIME_MEAN in self.G.nodes[n].keys():
-                if self.K_CONSUMPTION_TIME_RANDOM in self.G.nodes[n].keys():
-                    for k in (self.K_CONSUMPTION_TIME_MEAN, self.K_CONSUMPTION_TIME_MIN, self.K_CONSUMPTION_TIME_MAX):
-                        if k not in self.G.nodes[n].keys():
-                            err += 1
-                            fp.write("Error: node {} doesn't has '{}' property.\n".format(n, k))
-                            fp.flush()
-                    if self.K_CONSUMPTION_TIME_RANDOM in ("uniform","normal"):
-                        err += 1
-                        fp.write("Error: node {} has invalid value of property '{}':{}.\n".format(n, self.K_CONSUMPTION_TIME_RANDOM),
-                                 self.G.nodes[n][self.K_CONSUMPTION_TIME_RANDOM])
-                        fp.flush()
-                    elif self.K_CONSUMPTION_TIME_RANDOM == "normal":
-                        if self.K_CONSUMPTION_TIME_VARIANCE not in self.G.nodes[n].keys():
-                            err += 1
-                            fp.write("Error: node {} doesn't has '{}' property.\n".format(n, k))
-                            fp.flush()
-                else:
-                    err += 1
-                    fp.write("Error: node {} doesn't has '{}' property.\n".format(n, self.K_CONSUMPTION_TIME_RANDOM))
-                    fp.flush()
-            else:
-                err += 1
-                fp.write("Error: node {} doesn't has '{}' property.\n".format(n, self.K_CONSUMPTION_TIME_MEAN))
-                fp.flush()
+            #print(n, self.K_TYPE in self.G.nodes[n].keys())
+            if self.G.nodes[n][self.K_TYPE] == self.K_STORAGE:
+                storage_nodes.append(n)
+                self.G.nodes[n][self.K_INBOUNDS] = len(self.rG[n].keys())
+                self.G.nodes[n][self.K_OUTBOUNDS] = len(self.G[n].keys())
+        self.storage_nodes = storage_nodes
 
-            #if self.K_TYPE not in self.G.nodes[n].keys():
-            #    err += 1
-            #    fp.write("Error: node {} doesn't has '{} property".format(n, self.K_TYPE))
-            #    fp.flush()
-            #if self.G.nodes[n][self.K_TYPE] not in (self.K_CONTROLLER, self.PROCESSOR):
-            #    err += 1
-            #    fp.write("Error: {} of node {} is neither '{} nor '{}'\n".format(self.K_TYPE, n, self.K_CONTROLLER, self.K_PROCESSOR))
-            #    fp.flush()
-            for n in self.G.nodes:
-                for k in (self.K_CONSUMPTION_TIME, self.K_CONSUMPTION_TIME_MEAN, self.K_CONSUMPTION_TIME_MIN,
-                          self.K_CONSUMPTION_TIME_MAX, self.K_CONSUMPTION_TIME_VARIANCE):
-                    if k in self.G.nodes[n].keys():
-                        try:
-                            v = float(self.G.nodes[n][k])
-                            if v < 0:
-                                err += 1
-                                fp.write("Error: node {} has negative '{}' property:{}.\n".format(n, k))
-                                fp.flush()
-                        except:
-                            err += 1
-                            fp.write("Error: node {} has invalid '{}' property.\n".format(n, k))
-                            fp.flush()
-        return err
-    
-    def test_edge_attr(self, args):
-        if "fp" in args.keys():
-            fp = args["fp"]
-        else:
-            fp = sys.stderr
-        err = 0
+    def setup_dataflows(self):
+        dataflow_edges = []
         for e in self.G.edges:
-            if self.K_CONSUMPTION_TIME in self.G.edges[e[0],e[1]].keys():
-                pass
-            elif self.K_CONSUMPTION_TIME_MEAN in self.G.edges[e[0],e[1]].keys():
-                if self.K_CONSUMPTION_TIME_RANDOM in self.G.edges[e[0],e[1]].keys():
-                    for k in (self.K_CONSUMPTION_TIME_MEAN, self.K_CONSUMPTION_TIME_MIN, self.K_CONSUMPTION_TIME_MAX):
-                        if k not in self.G.edges[e[0],e[1]].keys():
-                            err += 1
-                            fp.write("Error: edge {} doesn't has '{}' property.\n".format(str(e), k))
-                            fp.flush()
-                    if self.K_CONSUMPTION_TIME_RANDOM in ("uniform","normal"):
-                        err += 1
-                        fp.write("Error: edge {} has invalid value of property '{}':{}.\n".format(str(e), self.K_CONSUMPTION_TIME_RANDOM),
-                                 self.G.edges[e[0],e[1]][self.K_CONSUMPTION_TIME_RANDOM])
-                        fp.flush()
-                    elif self.K_CONSUMPTION_TIME_RANDOM == "normal":
-                        if self.K_CONSUMPTION_TIME_VARIANCE not in self.G.edges[e[0],e[1]].keys():
-                            err += 1
-                            fp.write("Error: edge {} doesn't has '{}' property.\n".format(str(e), k))
-                            fp.flush()
-                else:
-                    err += 1
-                    fp.write("Error: edge {} doesn't has '{}' property.\n".format(str(e), self.K_CONSUMPTION_TIME_RANDOM))
-                    fp.flush()
-            else:
-                err += 1
-                fp.write("Error: edge {} doesn't has '{}' property.\n".format(str(e), self.K_CONSUMPTION_TIME_MEAN))
-                fp.flush()
+            if self.G.edges[e[0], e[1]][self.K_TYPE] == self.K_DATAFLOW:
+                dataflow_edges.append(e)
+        self.dataflow_edges = dataflow_edges
 
-            for e in self.G.edges:
-                for k in (self.K_CONSUMPTION_TIME, self.K_CONSUMPTION_TIME_MEAN, self.K_CONSUMPTION_TIME_MIN,
-                          self.K_CONSUMPTION_TIME_MAX, self.K_CONSUMPTION_TIME_VARIANCE):
-                    if k in self.G.edges[e[0],e[1]].keys():
-                        try:
-                            v = float(self.G.edges[e[0],e[1]][k])
-                            if v < 0:
-                                err += 1
-                                fp.write("Error: edge {} has negative '{}' property:{}.\n".format(str(e), k))
-                                fp.flush()
-                        except:
-                            err += 1
-                            fp.write("Error: edge {} has invalid '{}' property value:{}.\n".format(str(e), k, str(self.G.edges[e[0],e[1]][k])))
-                            fp.flush()
+    def setup_controllers(self):
+        controller_nodes = []
+        for n in self.G.nodes:
+            if self.G.nodes[n][self.K_TYPE] == self.K_CONTROLLER:
+                controller_nodes.append(n)
+        self.controller_nodes = controller_nodes
 
-        return err
-
-    def test_connectivities(self, args):
-        if "fp" in args.keys():
-            fp = args["fp"]
-        else:
-            fp = sys.stderr
-        err = 0
-        return err
+    def setup_controlflows(self):
+        controlflow_edges = []
+        for e in self.G.edges:
+            if self.G.edges[e[0], e[1]][self.K_TYPE] == self.K_CONTROLFLOW:
+                controlflow_edges.append(e)
+        self.controlflow_edges = controlflow_edges
 
     def test(self, args):
         if self.tested:
@@ -203,85 +155,113 @@ class BasicWorkflowSimulator(Simulator):
         else:
             fp = sys.stderr
         err = 0
-        err += self.test_node_attr(args)
-        err += self.test_edge_attr(args)
-        err += self.test_connectivities(args)
+        err += self.test_storage_nodes(args)
+        err += self.test_dataflow_edges(args)
+        err += self.test_controller_nodes(args)
+        err += self.test_controlflow_edges(args)
         if err != 0:
             fp.write("Error: {} problem(s) found\n".format(err))
             fp.flush()
             return False
         return True
 
-    def restore(self, nodeid_list, nodeatt_list, edge_matrix):
-        for i,a in zip(range(0, len(nodeatt_list)), nodeatt_list):
-            self.nodeatt_list[i].clear()
-            for k in a.keys():
-                self.nodeatt_list[i][k] = a[k]
-        for i in range(0, len(nodeatt_list)):
-            for j in range(0, len(nodeatt_list)):
-                if self.edge_matrix[i][j] is not None:
-                    self.edge_matrix[i][j].clear()
-                    for k in edge_matrix[i][j].keys():
-                        self.edge_matrix[i][j][k] = edge_matrix[i][j][k]
+    def test_storage_nodes(self, args):
+        if "fp" in args.keys():
+            fp = args["fp"]
+        else:
+            fp = sys.stderr
+        err = 0
+        for n in self.storage_nodes:
+            for k in (self.K_STATE, self.K_INBOUNDS, self.K_OUTBOUNDS, self.K_UNIT):
+                if k not in self.G.nodes[n].keys():
+                    err += 1
+                    fp.write("Error: {} '{}' doesn't has '{}' property.\n".format(self.K_STORAGE, str(n), k))
+                    fp.flush()
+        return err
 
-    def create_nodeid_list(self):
-        self.nodeid_list = [_  for _ in self.G.nodes]
+    def test_dataflow_edges(self, args):
+        if "fp" in args.keys():
+            fp = args["fp"]
+        else:
+            fp = sys.stderr
+        err = 0
+        for e in self.dataflow_edges:
+            for k in (self.K_STATE, self.K_VELOCITY, self.K_CONSUMED_TIME):
+                if k not in self.G.edges[e[0], e[1]].keys():
+                    err += 1
+                    fp.write("Error: {} '{}' doesn't has '{}' property.\n".format(self.K_DATAFLOW, str(e), k))
+                    fp.flush()
+        return err
 
-    def create_nodeatt_list(self):
-        rG = self.G.reverse(copy=True)
-        nodeatt_list = [None for _ in self.G.nodes]
-        for i,n in zip(range(0, len(self.nodeid_list)), self.nodeid_list):
-            nodeatt_list[i] = {
-                self.K_FORKS: len(self.G[n].keys()),
-                self.K_FORKED: 0,
-                self.K_JOINS: len(rG[n].keys()),
-                self.K_JOINED: 0,
-                self.K_COMPLETED: False,
-                self.K_CONSUMED_TIME: 0,
-                self.K_START_TIME: None,
-                self.K_END_TIME: None,
-            }
-            for k in (self.K_CONSUMPTION_TIME, self.K_CONSUMPTION_TIME_MEAN, self.K_CONSUMPTION_TIME_MIN,
-                      self.K_CONSUMPTION_TIME_MAX, self.K_CONSUMPTION_TIME_RANDOM):
-                if k in self.G.nodes[n].keys():
-                    nodeatt_list[i][k] = self.G.nodes[n][k]
-        self.nodeatt_list = nodeatt_list
-    
-    def create_edge_matrix(self):
-        edge_matrix = []
-        for _ in range(0, len(self.nodeid_list)):
-            edge_matrix.append([None for _ in range(0, len(self.nodeid_list))])
-        for i,n in zip(range(0, len(self.nodeid_list)), self.nodeid_list):
-            for j,m in zip(range(0, len(self.nodeid_list)), self.nodeid_list):
-                if self.G.has_edge(n, m):
-                    edge_matrix[i][j] = {
-                        self.K_COMPLETED: False,
-                        self.K_CONSUMED_TIME: 0,
-                        self.K_START_TIME: None,
-                        self.K_END_TIME: None,
-                    }
-                    for k in (self.K_CONSUMPTION_TIME, self.K_CONSUMPTION_TIME_MEAN, self.K_CONSUMPTION_TIME_MIN,
-                              self.K_CONSUMPTION_TIME_MAX, self.K_CONSUMPTION_TIME_RANDOM):
-                        if k in self.G.edges[n,m].keys():
-                            edge_matrix[i][j][k] = self.G.edges[n,m][k]
-        self.edge_matrix = edge_matrix
+    def test_controller_nodes(self, args):
+        if "fp" in args.keys():
+            fp = args["fp"]
+        else:
+            fp = sys.stderr
+        err = 0
+        for n in self.controller_nodes:
+            for k in (self.K_STATE, self.K_START_TIME, self.K_END_TIME, self.K_DATAFLOWS, self.K_INACTIVE_INTERVALS):
+                      #self.K_START_TIME_SCHEDULED, self.K_END_TIME_SCHDULED,
+                      #self.K_CONSUMPTION_TIME_SCHDULED, self.INACTIVE_INTERVALS):
+                if k not in self.G.nodes[n].keys():
+                    err += 1
+                    fp.write("Error: {} '{}' doesn't has '{}' property.\n".format(self.K_CONTROLLER, str(n), k))
+                    fp.flush()
+            if self.K_DATAFLOWS in self.G.nodes[n].keys():
+                dataflows = self.G.nodes[n][self.K_DATAFLOWS]
+                for df in dataflows:
+                    if (df[0], df[1]) not in self.dataflow_edges:
+                        err += 1
+                        fp.write(
+                            "Error: {} {} has invalid dataflow: {}.\n".format(self.K_CONTROLLER, str(n), str((df[0], df[1]))))
+                        fp.flush()
+        return err
+
+    def test_controlflow_edges(self, args):
+        if "fp" in args.keys():
+            fp = args["fp"]
+        else:
+            fp = sys.stderr
+        err = 0
+        for e in self.controlflow_edges:
+            for k in (self.K_STATE,):
+                      #self.K_START_TIME_SCHEDULED, self.K_END_TIME_SCHDULED,
+                      #self.K_CONSUMPTION_TIME_SCHDULED, self.INACTIVE_INTERVALS):
+                if k not in self.G.edges[e[0], e[1]].keys():
+                    err += 1
+                    fp.write("Error: {} '{}' doesn't has '{}' property.\n".format(self.K_CONTROLFLOW, str(e), k))
+                    fp.flush()
+                for s in e:
+                    if s not in self.controller_nodes:
+                        err += 1
+                        fp.write(
+                            "Error: {} {} has invalid storage: {}.\n".format(self.K_CONTROLFLOW, str(e), s))
+                        fp.flush()
+        return err
+
+    def get_graph(self):
+        return self.G
+
+    def get_storage_nodes(self):
+        return self.storage_nodes
+
+    def get_dataflow_edges(self):
+        return self.dataflow_edges
+
+    def get_controller_nodes(self):
+        return self.controller_nodes
+
+    def get_tested(self):
+        return self.tested
+
+    def set_tested(self, tested):
+        self.tested = tested
 
     def is_workflow_finished(self):
         task_remained = False
-        for i,n in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-            if self.nodeatt_list[i] is not None and not self.nodeatt_list[i][self.K_COMPLETED]:
+        for c in self.controller_nodes:
+            if self.G.nodes[c][self.K_STATE] != self.K_FINISHED:
                 task_remained = True
-                break
-        if not task_remained:
-            for i,n in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                for j,m in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                    if self.edge_matrix[i][j] is not None and not self.edge_matrix[i][j][self.K_COMPLETED]:
-                        task_remained = True
-                        break
-                    if task_remained:
-                        break
-                if not task_remained:
-                    break
         return not task_remained
 
     def simulate_main(self, time, dt, args):
@@ -292,48 +272,91 @@ class BasicWorkflowSimulator(Simulator):
             fp = args["fp"]
         else:
             fp = sys.stderr
-        self.process_started(fp, time)
-        edges_to_start = []
+        # start workflow
+        if time == 0:
+            fp.write("{} started at {}.\n".format(self.K_WORKFLOW, time))
+        else:
+            fp.write("{} resumed at {}.\n".format(self.K_WORKFLOW, time))
+        fp.flush()
         while True:
-            for i,n in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                if self.nodeatt_list[i][self.K_JOINED] == self.nodeatt_list[i][self.K_JOINS]:
-                    if self.nodeatt_list[i][self.K_START_TIME] is None:
-                        self.nodeatt_list[i][self.K_START_TIME] = time
-                        self.nodeatt_list[i][self.K_CONSUMED_TIME] = 0
-                        self.node_process_started(n, fp, time)
-            edges_to_start_next_time = []
-            for i,n in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                if self.nodeatt_list[i][self.K_START_TIME] is not None and not self.nodeatt_list[i][self.K_COMPLETED]:
-                    self.nodeatt_list[i][self.K_CONSUMED_TIME] += dt
-                    if self.nodeatt_list[i][self.K_CONSUMED_TIME] >= self.nodeatt_list[i][self.K_CONSUMPTION_TIME]:
-                        self.nodeatt_list[i][self.K_END_TIME] = time + dt
-                        self.nodeatt_list[i][self.K_COMPLETED] = True
-                        for t in self.G[n].keys():
-                            edges_to_start_next_time.append((i, self.nodeid_list.index(t)))
-                        self.node_process_finished(n, fp, time+dt)
-            for i,n in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                for j,m in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                    if (i,j) in edges_to_start:
-                        if self.edge_matrix[i][j][self.K_START_TIME] is None:
-                            self.edge_matrix[i][j][self.K_START_TIME] = time
-                            self.edge_matrix[i][j][self.K_CONSUMED_TIME] = 0
-                            self.edge_process_started((n,m), fp, time)
-            for i,n in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                for j,m in zip(range(0, len(self.nodeatt_list)), self.nodeid_list):
-                    if self.edge_matrix[i][j] is not None:
-                        if self.edge_matrix[i][j][self.K_START_TIME] is not None and not self.edge_matrix[i][j][self.K_COMPLETED]:
-                            self.edge_matrix[i][j][self.K_CONSUMED_TIME] += dt
-                            if self.edge_matrix[i][j][self.K_CONSUMED_TIME] >= self.edge_matrix[i][j][self.K_CONSUMPTION_TIME]:
-                                self.edge_matrix[i][j][self.K_END_TIME] = time + dt
-                                self.edge_matrix[i][j][self.K_COMPLETED] = True
-                                self.nodeatt_list[j][self.K_JOINED] += 1
-                                self.edge_process_finished((n,m), fp, time+dt)
-            edges_to_start = edges_to_start_next_time
+            # collect active controllers
+            active_controllers = []
+            for c in self.controller_nodes:
+                if self.G.nodes[c][self.K_STATE] != self.K_FINISHED:
+                    active_controllers.append(c)
+                    #print(active_controllers)
+            # collect active dataflows
+            active_dataflows = []
+            for c in active_controllers:
+                inactive = False
+                for i in self.G.nodes[c][self.K_INACTIVE_INTERVALS]:
+                    if i[0] <= time and time <= i[1]:
+                        inactive = True
+                        break
+                if not inactive:
+                    for df in self.G.nodes[c][self.K_DATAFLOWS]:
+                        active_dataflows.append((df[0], df[1]))
+            #print(active_dataflows)
+            # drive dataflows
+            for s in self.storage_nodes:
+                if self.G.nodes[s][self.K_STATE] != self.K_CLOSED:
+                    for t in self.G[s].keys():
+                        if (s, t) in active_dataflows:
+                            #print("drive dataflow", (s, t))
+                            if self.G.nodes[t][self.K_STATE] != self.K_CLOSED:
+                                # TODO: velocity is needed to be variable
+                                velocity = self.G.edges[s, t][self.K_VELOCITY]
+                                trans_coefficience = self.G.edges[s, t][self.K_TRANS_COEFFICIENCE]
+                                source_amount = self.G.nodes[s][self.K_AMOUNT]
+                                if 0.0 < source_amount:
+                                    consumed_amount = velocity * dt
+                                    if source_amount < consumed_amount:
+                                        consumed_amount = source_amount
+                                    generated_amount = consumed_amount * trans_coefficience
+                                    self.G.nodes[s][self.K_AMOUNT] -= consumed_amount
+                                    self.G.nodes[t][self.K_AMOUNT] += generated_amount
+                                    self.G.nodes[t][self.K_ACCUMULATED] += generated_amount
+                                    source_unit = self.G.nodes[s][self.K_UNIT]
+                                    target_unit = self.G.nodes[t][self.K_UNIT]
+                                    fp.write("{} {} consumed {}[{}] and generated {}[{}] at {}.\n".format(self.K_DATAFLOW, str((s,t)), consumed_amount, source_unit, generated_amount, target_unit, time+dt))
+                                    fp.flush()
+                                #else:
+                                #    fp.write("{} {} consumed {}[{}] and generated {}[{}] at {}.\n".format(self.K_DATAFLOW, str((s,t)), 0, source_unit, 0, target_unit, time+dt))
+                                #    fp.flush()
+            # check if strages closed
+            for s in self.storage_nodes:
+                if self.G.nodes[s][self.K_STATE] != self.K_CLOSED:
+                    if self.G.nodes[s][self.K_INBOUNDS] == self.G.nodes[s][self.K_CLOSED_INBOUNDS]:
+                        if self.G.nodes[s][self.K_AMOUNT] == 0.0:
+                            self.G.nodes[s][self.K_STATE] = self.K_CLOSED
+                            fp.write("{} {} closed at {}.\n".format(self.K_STORAGE, s, time+dt))
+                            fp.flush()
+            # close dataflow sources
+            for df in active_dataflows:
+                if self.G.nodes[df[0]][self.K_STATE] != self.K_CLOSED:
+                    if self.G.nodes[df[0]][self.K_INBOUNDS] == self.G.nodes[df[0]][self.K_CLOSED_INBOUNDS]:
+                        if self.G.nodes[df[0]][self.K_AMOUNT] == 0.0:
+                            self.G.nodes[df[0]][self.K_STATE] = self.K_CLOSED
+            # close dataflow targets
+            for df in active_dataflows:
+                if self.G.nodes[df[0]][self.K_STATE] == self.K_CLOSED:
+                    self.G.nodes[df[1]][self.K_CLOSED_INBOUNDS] += 1
+            # check if controllers finished
+            for c in self.controller_nodes:
+                inactive = False
+                if self.G.nodes[c][self.K_STATE] != self.K_FINISHED:
+                    for df in self.G.nodes[c][self.K_DATAFLOWS]:
+                        if self.G.nodes[df[0]][self.K_STATE] == self.K_CLOSED:
+                            self.G.nodes[c][self.K_STATE] = self.K_FINISHED
+                            fp.write("{} {} finished at {}.\n".format(self.K_CONTROLLER, c, time+dt))
+                            fp.flush()
+            # make progress
             time += dt
             self.process_progress(fp, time)
             workflow_finished = self.is_workflow_finished()
             if workflow_finished:
-                self.process_finished(fp, time)
+                fp.write("{} {} finished at {}.\n".format(self.K_WORKFLOW, self.G.graph[self.K_NAME], time))
+                fp.flush()
                 return time
 
     def simulate(self, args):
@@ -486,42 +509,17 @@ class BasicWorkflowSimulatorController(SimulatorController):
         if not self.simulator.test(simulator_args):
             return False
         #self.simulator.set_tested(True)
-        nodeid_list_org = self.simulator.get_nodeid_list()
-        nodeatt_list_org = self.simulator.get_nodeatt_list()
-        edge_matrix_org = self.simulator.get_edge_matrix()
-        rng = RandomGenerator(simulator_args["dt"],
-                              RandomGenerator.K_RANDOM_TIME_MAX)
+        graph = self.simulator.get_graph()
+        #rng = RandomGenerator(simulator_args["dt"],
+        #                      RandomGenerator.K_RANDOM_TIME_MAX)
         # run simulation
         if once:
-            nodeid_list = json.loads(json.dumps(nodeid_list_org))
-            nodeatt_list = json.loads(json.dumps(nodeatt_list_org))
-            edge_matrix = json.loads(json.dumps(edge_matrix_org))
-            for n,a in zip(nodeid_list, nodeatt_list):
-                if self.simulator.K_CONSUMPTION_TIME not in a.keys():
-                    a[self.simulator.K_CONSUMPTION_TIME] = self.random(rng, a)
-            for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
-                for j,m in zip(range(0, len(nodeid_list)), nodeid_list):
-                    if edge_matrix[i][j] is not None:
-                        if self.simulator.K_CONSUMPTION_TIME not in edge_matrix[i][j].keys():
-                            edge_matrix[i][j][self.simulator.K_CONSUMPTION_TIME] = self.random(rng, a)
-            self.simulator.restore(nodeid_list, nodeatt_list, edge_matrix)
+            self.simulator.restore(graph)
             self.simulator.simulate(simulator_args)
-            self.dump_progress_report(progress_report)
             return False
         else:
             for i in range(0, simulator_args["i"]):
-                nodeid_list = json.loads(json.dumps(nodeid_list_org))
-                nodeatt_list = json.loads(json.dumps(nodeatt_list_org))
-                edge_matrix = json.loads(json.dumps(edge_matrix_org))
-                for n,a in zip(nodeid_list, nodeatt_list):
-                    if self.simulator.K_CONSUMPTION_TIME not in a.keys():
-                        a[self.simulator.K_CONSUMPTION_TIME] = self.random(rng, a)
-                for i,n in zip(range(0, len(nodeid_list)), nodeid_list):
-                    for j,m in zip(range(0, len(nodeid_list)), nodeid_list):
-                        if edge_matrix[i][j] is not None:
-                            if self.simulator.K_CONSUMPTION_TIME not in edge_matrix[i][j].keys():
-                                edge_matrix[i][j][self.simulator.K_CONSUMPTION_TIME] = self.random(rng, a)
-                self.simulator.restore(nodeid_list, nodeatt_list, edge_matrix)
+                self.simulator.restore(graph)
                 self.simulator.simulate(simulator_args)
                 pass
             #self.dump_progress_report(progress_report)
