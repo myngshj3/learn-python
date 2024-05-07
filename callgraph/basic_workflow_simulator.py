@@ -17,10 +17,15 @@ class BasicWorkflowSimulator(Simulator):
     K_EDGE = "edge"
     K_NAME = "name"
     K_TYPE = "type"
+    K_TIME = "time"
     K_WORKFLOW = "workflow"
     K_DATAFLOW = "dataflow"
     K_STORAGE = "storage"
     K_CONTROLLER = "controller"
+    K_CONSUMED = "consumed"
+    K_CONSUMED_UNIT = "consumed-unit"
+    K_GENERATED = "generated"
+    K_GENERATED_UNIT = "generated-unit"
     K_CONTROLFLOW = "controlflow"
     K_CONSUMPTION_TIME = "consumption-time"
     K_CONSUMPTION_TIME_SCHEDULED = "consumption-time-scheduled"
@@ -49,7 +54,7 @@ class BasicWorkflowSimulator(Simulator):
     K_UNIT = "unit"
     K_OPENED = "opened"
     K_CLOSED = "closed"
-    K_PROGRESSING = "progressing"
+    K_PROGRESS = "progress"
     K_STATE = "state"
     K_PREPARED = "prepared"
     K_ACTIVE = "active"
@@ -57,6 +62,7 @@ class BasicWorkflowSimulator(Simulator):
     K_FINISHED = "finished"
     K_UNAVAILABLE = "unavailable"
 
+    K_SUPRESS_REPORT = "sr"
     K_PROGRESS_FILTER = "pf"
     K_PROGRESS_REPORT = "pr"
     K_CONTROLLER_STARTED = "controller-started"
@@ -268,16 +274,25 @@ class BasicWorkflowSimulator(Simulator):
         self.simulator_args.clear()
         for k in args.keys():
             self.simulator_args[k] = args[k]
+        progress_report = self.simulator_args[self.K_PROGRESS_REPORT]
         if "fp" in args.keys():
             fp = args["fp"]
         else:
             fp = sys.stderr
         # start workflow
         if time == 0:
-            fp.write("{} started at {}.\n".format(self.K_WORKFLOW, time))
+            progress_report({
+                self.K_TYPE: self.K_WORKFLOW,
+                self.K_NAME: self.G.graph[self.K_NAME],
+                self.K_STATE: self.K_STARTED,
+                self.K_TIME: time,
+            })
         else:
-            fp.write("{} resumed at {}.\n".format(self.K_WORKFLOW, time))
-        fp.flush()
+            progress_report({
+                self.K_TYPE: self.G.graph[self.K_NAME],
+                self.K_STATE: self.K_RESUMED,
+                self.K_TIME: time,
+            })
         while True:
             # collect active controllers
             active_controllers = []
@@ -291,7 +306,11 @@ class BasicWorkflowSimulator(Simulator):
                     if preceeds_completed:
                         active_controllers.append(c)
                         self.G.nodes[c][self.K_STATE] = self.K_STARTED
-                        print(c)
+                        progress_report({
+                            self.K_TYPE: self.G.nodes[c][self.K_TYPE],
+                            self.K_STATE: self.K_STARTED,
+                            self.K_TIME: time,
+                        })
                 elif self.G.nodes[c][self.K_STATE] == self.K_STARTED:
                     active_controllers.append(c)
                 else:
@@ -340,11 +359,20 @@ class BasicWorkflowSimulator(Simulator):
                                     self.G.nodes[t][self.K_ACCUMULATED] += generated_amount
                                     source_unit = self.G.nodes[s][self.K_UNIT]
                                     target_unit = self.G.nodes[t][self.K_UNIT]
-                                    fp.write("{} {} consumed {}[{}] and generated {}[{}] at {}.\n".format(self.K_DATAFLOW, str((s,t)), consumed_amount, source_unit, generated_amount, target_unit, time+dt))
-                                    fp.flush()
-                                #else:
-                                #    fp.write("{} {} consumed {}[{}] and generated {}[{}] at {}.\n".format(self.K_DATAFLOW, str((s,t)), 0, source_unit, 0, target_unit, time+dt))
-                                #    fp.flush()
+                                    self.G.edges[s, t][self.K_CONSUMED_TIME] += dt
+                                    progress_report({
+                                        self.K_TYPE: self.G.edges[s, t][self.K_TYPE],
+                                        self.K_NAME: str((s, t)),
+                                        self.K_STATE: self.K_PROGRESS,
+                                        self.K_CONSUMED: consumed_amount,
+                                        self.K_CONSUMED_UNIT: source_unit,
+                                        self.K_GENERATED: generated_amount,
+                                        self.K_GENERATED_UNIT: target_unit,
+                                        self.K_TIME: time+dt,
+                                    })
+            # progress active controllers
+            for c in active_controllers:
+                self.G.nodes[c][self.K_CONSUMED_TIME] += dt
             # drive controlflows
             for cf in active_controlflows:
                 self.G.edges[cf[0], cf[1]][self.K_CONSUMED_TIME] += dt
@@ -356,8 +384,12 @@ class BasicWorkflowSimulator(Simulator):
                     if self.G.nodes[s][self.K_INBOUNDS] == self.G.nodes[s][self.K_CLOSED_INBOUNDS]:
                         if self.G.nodes[s][self.K_AMOUNT] == 0.0:
                             self.G.nodes[s][self.K_STATE] = self.K_CLOSED
-                            fp.write("{} {} closed at {}.\n".format(self.K_STORAGE, s, time+dt))
-                            fp.flush()
+                            progress_report({
+                                self.K_TYPE: self.G.nodes[s][self.K_TYPE],
+                                self.K_NAME: s,
+                                self.K_STATE: self.K_CLOSED,
+                                self.K_TIME: time+dt,
+                            })
             # close dataflow sources
             for df in active_dataflows:
                 if self.G.nodes[df[0]][self.K_STATE] != self.K_CLOSED:
@@ -375,8 +407,12 @@ class BasicWorkflowSimulator(Simulator):
                     for df in self.G.nodes[c][self.K_DATAFLOWS]:
                         if self.G.nodes[df[0]][self.K_STATE] == self.K_CLOSED:
                             self.G.nodes[c][self.K_STATE] = self.K_FINISHED
-                            fp.write("{} {} finished at {}.\n".format(self.K_CONTROLLER, c, time+dt))
-                            fp.flush()
+                            progress_report({
+                                self.K_TYPE: self.G.nodes[c][self.K_TYPE],
+                                self.K_NAME: c,
+                                self.K_STATE: self.K_FINISHED,
+                                self.K_TIME: time+dt,
+                            })
             # check if controlflows finished
             #for cf in active_controlflows:
             #    if self.G.edges[cf[0], cf[1]][self.K_STATE] == self.K_FINISHED:
@@ -386,8 +422,12 @@ class BasicWorkflowSimulator(Simulator):
             self.process_progress(fp, time)
             workflow_finished = self.is_workflow_finished()
             if workflow_finished:
-                fp.write("{} {} finished at {}.\n".format(self.K_WORKFLOW, self.G.graph[self.K_NAME], time))
-                fp.flush()
+                progress_report({
+                    self.K_TYPE: self.K_WORKFLOW,
+                    self.K_NAME: self.G.graph[self.K_NAME],
+                    self.K_STATE: self.K_FINISHED,
+                    self.K_TIME: time,
+                })
                 return time
 
     def simulate(self, args):
@@ -405,62 +445,6 @@ class BasicWorkflowSimulator(Simulator):
         self.simulate_main(time, dt, args)
         
         return False
-
-    def process_started(self, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_PROCESS_STARTED in self.simulator_args[self.K_PROGRESS_FILTER]):
-            self.simulator_args[self.K_PROGRESS_REPORT](self.K_GRAPH, self.G.graph[self.K_NAME], self.K_STARTED, time)
-
-    def process_progress(self, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_PROCESS_STARTED in self.simulator_args[self.K_PROGRESS_FILTER]):
-            if time % 10 == 0:
-                self.simulator_args[self.K_PROGRESS_REPORT](self.K_GRAPH, self.G.graph[self.K_NAME], self.K_PROGRESSING, time)
-
-    def process_finished(self, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_PROCESS_FINISHED in self.simulator_args[self.K_PROGRESS_FILTER]):
-                self.simulator_args[self.K_PROGRESS_REPORT](self.K_GRAPH, self.G.graph[self.K_NAME], self.K_FINISHED, time)
-
-    def node_process_started(self, n, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_NODE_PROCESS_STARTED in self.simulator_args[self.K_PROGRESS_FILTER]):
-            self.simulator_args[self.K_PROGRESS_REPORT](self.K_NODE, n, self.K_STARTED, time)
-
-    def node_process_progress(self, n, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_NODE_PROCESS_PROGRESS in self.simulator_args[self.K_PROGRESS_FILTER]):
-            self.simulator_args[self.K_PROGRESS_REPORT](n, self.K_PROGRESSING, time)
-
-    def node_process_finished(self, n, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_NODE_PROCESS_FINISHED in self.simulator_args[self.K_PROGRESS_FILTER]):
-            self.simulator_args[self.K_PROGRESS_REPORT](self.K_NODE, n, self.K_FINISHED, time)
-
-    def edge_process_started(self, e, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_EDGE_PROCESS_STARTED in self.simulator_args[self.K_PROGRESS_FILTER]):
-            self.simulator_args[self.K_PROGRESS_REPORT](self.K_EDGE, e, self.K_STARTED, time)
-
-    def edge_process_progress(self, e, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_EDGE_PROCESS_PROGRESS in self.simulator_args[self.K_PROGRESS_FILTER]):
-            if time % 10 == 0:
-                self.simulator_args[self.K_PROGRESS_REPORT](self.K_EDGE, e, self.K_PROGRESSING, time)
-
-    def edge_process_finished(self, e, fp, time):
-        if self.K_PROGRESS_FILTER not in self.simulator_args.keys() or \
-           (self.simulator_args[self.K_PROGRESS_FILTER] is None or \
-            self.K_EDGE_PROCESS_FINISHED in self.simulator_args[self.K_PROGRESS_FILTER]):
-            self.simulator_args[self.K_PROGRESS_REPORT](self.K_EDGE, e, self.K_FINISHED, time)
 
 
 class BasicWorkflowSimulatorController(SimulatorController):
@@ -492,13 +476,13 @@ class BasicWorkflowSimulatorController(SimulatorController):
             confidence = 0.9
         samples = []
         for s in progress_report:
-            if s[0] == self.simulator.K_GRAPH and s[2] == self.simulator.K_FINISHED:
-                samples.append(s[3])
+            if s[self.simulator.K_TYPE] == self.simulator.K_WORKFLOW and s[self.simulator.K_STATE] == self.simulator.K_FINISHED:
+                samples.append(s[self.simulator.K_TIME])
         a = 1.0 * np.array(samples)
         n = len(a)
         m, se = np.mean(a), stats.sem(a)
         h = se * stats.t.ppf((1+confidence)/2.0, n-1)
-        sys.stderr.write("Mean time:{}, Confidence time interval for confidence {}:{}-{}\n".format(Decimal(m).quantize(Decimal("0.01"),ROUND_HALF_UP),Decimal(confidence).quantize(Decimal("0.01"),ROUND_HALF_UP),Decimal(m-h).quantize(Decimal("0.01"),ROUND_HALF_UP),Decimal(m+h).quantize(Decimal("0.01"),ROUND_HALF_UP)))
+        sys.stderr.write("Mean time: {}, Time interval for confidence {}: {} - {}\n".format(Decimal(m).quantize(Decimal("0.01"),ROUND_HALF_UP),Decimal(confidence).quantize(Decimal("0.01"),ROUND_HALF_UP),Decimal(m-h).quantize(Decimal("0.01"),ROUND_HALF_UP),Decimal(m+h).quantize(Decimal("0.01"),ROUND_HALF_UP)))
 
     def run(self, args, once=True):
         # check arguments
@@ -520,27 +504,32 @@ class BasicWorkflowSimulatorController(SimulatorController):
             simulator_args["dt"] = 0.1
         else:
             simulator_args["dt"] = float(args["dt"])
-        if self.simulator.K_PROGRESS_FILTER not in args.keys():
-            report_filter = None
+        if self.simulator.K_SUPRESS_REPORT not in args.keys():
+            supress_report = None
         else:
-            pf = args[self.simulator.K_PROGRESS_FILTER]
-            if pf is None:
-                report_filter = None
+            sr = args[self.simulator.K_SUPRESS_REPORT]
+            if sr is None:
+                supress_report = None
             else:
-                report_filter = pf.split(",")
-        simulator_args[self.simulator.K_PROGRESS_FILTER] = report_filter
+                supress_report = sr.split(",")
+        simulator_args[self.simulator.K_SUPRESS_REPORT] = supress_report
         # setup for progress report
         progress_report = []
         output_file = None if "f" not in args.keys() else self.simulator.args["f"]
         def report(*args):
             if output_file is None:
-                sys.stdout.write(" ".join([str(_) for _ in args]) + "\n")
+                for arg in args:
+                    if supress_report is None or "-".join((arg[self.simulator.K_TYPE], arg[self.simulator.K_STATE])) not in supress_report:
+                        sys.stdout.write(json.dumps(arg) + "\n")
+                        progress_report.append(arg)
                 sys.stdout.flush()
             else:
                 with open(output_file, "a") as f:
-                    f.write(" ".join([str(_) for _ in args]) + "\n")
+                    for arg in args:
+                        if supress_report is None or "-".join((arg[self.simulator.K_TYPE], arg[self.simulator.K_STATE])) not in supress_report:
+                            f.write(json.dumps(arg) + "\n")
+                            progress_report.append(arg)
                     f.flush()
-            progress_report.append([_ for _ in args])
             pass
         simulator_args[BasicWorkflowSimulator.K_PROGRESS_REPORT] = report
         if not self.simulator.test(simulator_args):
@@ -585,7 +574,7 @@ class BasicWorkflowSimulatorController(SimulatorController):
         if p + self.K_MIN not in a.keys():
             return None
         _min = a[p + self.K_MIN]
-        if p + self.K_MAX not in keys():
+        if p + self.K_MAX not in a.keys():
             return None
         _max = a[p + self.K_MAX]
         if p + self.K_VARIANCE in a.keys():
