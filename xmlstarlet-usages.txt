@@ -1,0 +1,5 @@
+
+$ xml sel -t -m "/flow/step/proc[starts-with(@class,'net.myngshj3')]" -v "concat('/flow/step[@id=',../@id,']/proc[action=',@class,']')"
+/flow/step[@id=1]/proc[action=net.myngshj3.MyStepper]
+
+
